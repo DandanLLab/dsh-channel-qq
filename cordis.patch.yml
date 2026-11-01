@@ -1,0 +1,73 @@
+# dsh-channel-qq bundle patch: the QQ channel over OneBot v11.
+# Applied as one layer above the profile's bundle stack; rows here only
+# declare defaults. Deployment-specific values (connection URL, token,
+# primary group, workspace path) belong in the profile's own cordis.patch.yml
+# user layer, which replaces a row's whole `config`.
+#
+# The plugin deliberately ships no access-control or moderation stack of its
+# own: inbound gating is limited to trigger policy (mention/keyword/probability),
+# and every agent-side capability stays under the harness's default
+# permission/sandbox presets.
+- insert:
+    - id: channel-qq
+      name: dsh-channel-qq
+      config:
+        connection:
+          mode: forward
+          url: ws://127.0.0.1:3001
+        selfId: 10000
+        admins: []
+        primaryGroup: null
+        requireMention: true
+        talkValue: 0.6
+        historyLimit: 10
+        workspacePath: null
+        agentPreset: standard
+        permissionPreset: workspace-write
+        rateLimitMs: 300
+        maxMessageLength: 4000
+        segmentation:
+          enabled: true
+          minLength: 20
+          maxSegments: 8
+          removeTrailingPeriod: true
+        batching:
+          windowMs: 20000
+          maxMessages: 20
+          maxChars: 4000
+        injectMode:
+          enabled: false
+          wakeIdle: true
+        persona:
+          selfName: Assistant
+          masterName: Boss
+          peerName: Friend
+          pronoun: I
+        keywordTriggers: []
+        keywordReactions: []
+        emoji:
+          steal: true
+          autoSend: false
+          autoSendProbability: 0.3
+          dir: null
+          registeredDir: null
+        # Bundled life-engine component (memory plasticity / inner monologue /
+        # sleep consolidation / KB search). Identity (agentName / familyPeers /
+        # familyMap / kbCli / embedUrl) is read hot from
+        # <dshHome>/tongling-life/config.json — see INSTALL notes.
+        lifeEngine:
+          enabled: true
+        # Bundled dsh-meme component (meme pack library, send_meme/learn_meme,
+        # /dsh-memes image route, /memes-panel admin). Pack root override and
+        # identity-free defaults; admin routes need the host webServer service.
+        memeEngine:
+          enabled: true
+          memeRoot: null
+          webRoutes: true
+        # 陌生人私聊门控：admins 永远直通；好友自动放行；陌生人进待审并通知主人，
+        # 用 qq_dm_gate 工具 approve/deny，或把号写进 allowList 直通。
+        dmGate:
+          enabled: true
+          allowList: []
+          notifyAdmin: true
+        debug: false

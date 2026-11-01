@@ -1,0 +1,55 @@
+{
+  "name": "dsh-channel-qq",
+  "version": "0.3.3",
+  "description": "QQ channel plugin for DeepSeek Harness via OneBot v11, with a bundled Life Engine component (memory plasticity, inner monologue, sleep consolidation, KB search)",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DandanLLab/dsh-channel-qq.git"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "INSTALL.md",
+    "docs"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "scripts": {
+    "build": "node scripts/copy-life-assets.mjs && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "silk-wasm": "^3.7.1",
+    "ws": "^8.18.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-tools": "*"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@types/ws": "^8.5.14",
+    "typescript": "^5.9.3",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.5",
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.5"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/meme/client.js",
+    "./package.json": "./package.json",
+    "./life/kb": "./lib/life/kb.cjs"
+  }
+}
