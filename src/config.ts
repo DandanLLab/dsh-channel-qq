@@ -109,6 +109,9 @@ export interface QQChannelConfig {
   primaryGroup: number | null
   /** 游历群/外出群白名单：可发言但非主群（2026-09-30 owner 令） */
   extraGroups?: number[]
+  /** 强制艾特模式的群（1109 师父令）：名单内的群只有被 @（或关键词触发）才应答，
+   *  不做 talkValue 概率闲聊。名单外的群行为不变——实现蜂群艾特/主群闲聊的分区。 */
+  requireMentionByGroups?: number[]
   requireMention: boolean
   /** Base reply probability in groups; the primary group may override via primaryTalkValue. */
   talkValue: number
