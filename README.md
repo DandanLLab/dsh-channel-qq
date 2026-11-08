@@ -1,10 +1,28 @@
+<div align="center">
+
 # dsh-channel-qq
 
-dsh（DeepSeek Harness）的 QQ 群聊/私聊通道插件，基于 OneBot v11（NapCat）。
+**把 QQ 的世界完整映射进 Agent 上下文，把行动权交给 Agent 本身**
 
-把 QQ 的世界完整映射进 Agent 上下文，把行动权交给 Agent 本身——插件不做任何代答，
-只负责把「看到了什么、能做什么」如实递给模型。106 个工具、双模式消息协议、
-连锁动作层、QQ 默认表情直发、生活引擎与表情图库内置组件。
+*插件不做任何代答——只负责把「看到了什么、能做什么」如实递给模型*
+
+![version](https://img.shields.io/badge/version-0.3.5-blue)
+![license](https://img.shields.io/badge/license-MIT-green)
+![lang](https://img.shields.io/badge/TypeScript-%E2%9C%93-3178c6)
+![protocol](https://img.shields.io/badge/OneBot-v11-ff69b4)
+![client](https://img.shields.io/badge/NapCat-%E2%9C%93-orange)
+![tools](https://img.shields.io/badge/tools-106-8A2BE2)
+![faces](https://img.shields.io/badge/QQ%E9%BB%98%E8%AE%A4%E8%A1%A8%E6%83%85-262%20ids-f793cf)
+
+**106 个工具** · 注入/攒批双模式 · 连锁动作层 · QQ 默认表情直发 · 生活引擎 · 表情图库
+
+[安装](#安装) · [全部用法](#全部用法) · [配置参考](#配置参考常用项) · [模块文档](docs/modules/README.md) · [关联文章](#-关联文章与项目)
+
+</div>
+
+---
+
+dsh（DeepSeek Harness）的 QQ 群聊/私聊通道插件，基于 OneBot v11（NapCat）。
 
 ## 它解决什么问题
 
@@ -280,6 +298,34 @@ node scripts/daily-report.mjs --date 2026-09-26
 - `deny` 进冷却：该号再发消息不回复不通知，静默丢弃
 - 状态持久化在 `<dshHome>/channel-qq/dm-gate.json`
 - 白名单外的群收到消息同样给主人发预警（不会在这些群发言）
+
+## 📚 关联文章与项目
+
+### 技术深读
+
+| 文章 | 讲什么 |
+|---|---|
+| [系统提示词缓存率稳定化](docs/cache-stabilization.md) | 为什么尾部动态一字会让 47KB 前缀缓存全灭，冻结机制与底座投影仲裁 |
+| [表情包完整方案](docs/emoji-pipeline.md) | 偷取→入库三闸→严格后缀→四级查库→MISS 兜底的完整管线 |
+| [模块文档 26 篇](docs/modules/README.md) | 每个代码模块一篇：职责/机制/模块连接，连成一条数据流 |
+| [已知问题免疫说明](docs/daytag-crash-immunity.md) | 启动 15 分钟崩溃案的全档案（症状→机理→根因→版本表） |
+| [上游融合对账](docs/upstream-fusion-ledger.md) | 二改吸收了什么、不吸收什么、为什么 |
+
+### 介绍与上手
+
+- [论坛介绍稿](docs/forum-intro.md) — 面向社区的项目介绍
+- [配置参考](#配置参考常用项) — 21 项配置逐项默认值（与源码 DEFAULT_CONFIG 对齐）
+- [QQ 默认表情斜杠码](assets/qq-face-table.json) — 262 个官方表情 id 双向解码表
+
+### 亲缘项目
+
+| 项目 | 关系 |
+|---|---|
+| [dsh-life-engine](https://github.com/DandanLLab/dsh-life-engine) | 内置组件：记忆可塑性/内心独白/睡眠巩固/KB 检索 |
+| [dsh-meme](https://github.com/yyh-001/dsh-meme) | 内置组件：表情图库/send_meme/learn_meme（MIT, © Selfloom contributors） |
+| [NapCat](https://github.com/NapNeko/NapCatQQ) | OneBot v11 实现（QQ 协议端） |
+| [KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi) | 酷狗点歌的后端服务（可选自部署） |
+| [DeepSeek Harness](https://github.com/DeepSeek-AI) | dsh：本插件挂载的 agent harness（cordis 框架） |
 
 ## 文档索引
 
