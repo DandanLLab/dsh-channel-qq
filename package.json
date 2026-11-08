@@ -1,6 +1,6 @@
 {
   "name": "dsh-channel-qq",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "QQ channel plugin for DeepSeek Harness via OneBot v11, with a bundled Life Engine component (memory plasticity, inner monologue, sleep consolidation, KB search)",
   "type": "module",
   "main": "lib/index.js",
