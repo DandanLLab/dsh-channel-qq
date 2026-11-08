@@ -1,3 +1,11 @@
+<div align="center">
+
+💗 **emotion** ｜ [← dm-gate](./dm-gate.md) ｜ [📚 总索引](./README.md) ｜ [affection →](./affection.md)
+
+</div>
+
+---
+
 # emotion.ts — 情感引擎
 
 **文件**: `src/emotion.ts`（282 行）

@@ -1,3 +1,11 @@
+<div align="center">
+
+📜 **sent-log** ｜ [← scheduler](./scheduler.md) ｜ [📚 总索引](./README.md) ｜ [settings-api →](./settings-api.md)
+
+</div>
+
+---
+
 # sent-log.ts — 发送流水
 
 **文件**: `src/sent-log.ts`（62 行）

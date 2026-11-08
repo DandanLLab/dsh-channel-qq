@@ -1,3 +1,11 @@
+<div align="center">
+
+🚪 **index** ｜ [← bridge](./bridge.md) ｜ [📚 总索引](./README.md) ｜ [services →](./services.md)
+
+</div>
+
+---
+
 # index.ts — 入口与生命周期
 
 **文件**: `src/index.ts`（271 行）

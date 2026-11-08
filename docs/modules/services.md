@@ -1,3 +1,11 @@
+<div align="center">
+
+🔗 **services** ｜ [← index](./index.md) ｜ [📚 总索引](./README.md) ｜ [chain →](./chain.md)
+
+</div>
+
+---
+
 # services.ts — dsh 底座类型胶水
 
 **文件**: `src/services.ts`（141 行）

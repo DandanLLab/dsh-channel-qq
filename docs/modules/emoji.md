@@ -1,3 +1,11 @@
+<div align="center">
+
+🥷 **emoji** ｜ [← emoji-library](./emoji-library.md) ｜ [📚 总索引](./README.md) ｜ [knowledge →](./knowledge.md)
+
+</div>
+
+---
+
 # emoji.ts — 表情偷取管线
 
 **文件**: `src/emoji.ts`（139 行）

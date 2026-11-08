@@ -1,3 +1,11 @@
+<div align="center">
+
+⏰ **scheduler** ｜ [← affection](./affection.md) ｜ [📚 总索引](./README.md) ｜ [sent-log →](./sent-log.md)
+
+</div>
+
+---
+
 # scheduler.ts — 主动出击调度
 
 **文件**: `src/scheduler.ts`（225 行）

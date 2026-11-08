@@ -1,3 +1,11 @@
+<div align="center">
+
+🌉 **bridge** ｜ [← config](./config.md) ｜ [📚 总索引](./README.md) ｜ [index →](./index.md)
+
+</div>
+
+---
+
 # bridge.ts — 会话桥（插件心脏）
 
 **文件**: `src/bridge.ts`（1099 行）

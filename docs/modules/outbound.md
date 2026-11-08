@@ -1,3 +1,11 @@
+<div align="center">
+
+📮 **outbound** ｜ [← chain](./chain.md) ｜ [📚 总索引](./README.md) ｜ [tools →](./tools.md)
+
+</div>
+
+---
+
 # outbound.ts — 出站队列
 
 **文件**: `src/outbound.ts`（329 行）

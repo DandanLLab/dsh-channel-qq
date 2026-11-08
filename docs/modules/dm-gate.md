@@ -1,3 +1,11 @@
+<div align="center">
+
+🚧 **dm-gate** ｜ [← knowledge](./knowledge.md) ｜ [📚 总索引](./README.md) ｜ [emotion →](./emotion.md)
+
+</div>
+
+---
+
 # dm-gate.ts — 陌生人私聊门控
 
 **文件**: `src/dm-gate.ts`（152 行）

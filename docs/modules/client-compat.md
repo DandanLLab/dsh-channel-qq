@@ -1,3 +1,11 @@
+<div align="center">
+
+🧭 **client-compat** ｜ [← onebot](./onebot.md) ｜ [📚 总索引](./README.md) ｜ [config →](./config.md)
+
+</div>
+
+---
+
 # client-compat.ts — 客户端识别与能力矩阵
 
 **文件**: `src/client-compat.ts`（126 行）

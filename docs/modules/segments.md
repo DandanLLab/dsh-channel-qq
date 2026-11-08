@@ -1,3 +1,11 @@
+<div align="center">
+
+🔍 **segments** ｜ [← types](./types.md) ｜ [📚 总索引](./README.md) ｜ [onebot →](./onebot.md)
+
+</div>
+
+---
+
 # segments.ts — 入站消息解析
 
 **文件**: `src/segments.ts`（124 行）

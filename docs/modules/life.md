@@ -1,3 +1,11 @@
+<div align="center">
+
+🌱 **life** ｜ [← kugou-api](./kugou-api.md) ｜ [📚 总索引](./README.md) ｜ [meme →](./meme.md)
+
+</div>
+
+---
+
 # life/ — 生活引擎组件（dsh-life-engine 并入）
 
 **目录**: `src/life/`（index.ts 薄包装 + life-engine.js / kb.cjs 原样组件）

@@ -1,3 +1,11 @@
+<div align="center">
+
+🛰️ **settings-api** ｜ [← sent-log](./sent-log.md) ｜ [📚 总索引](./README.md) ｜ [stt →](./stt.md)
+
+</div>
+
+---
+
 # settings-api.ts — Web 管理面板 API
 
 **文件**: `src/settings-api.ts`（193 行）

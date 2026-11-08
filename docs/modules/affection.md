@@ -1,3 +1,11 @@
+<div align="center">
+
+💞 **affection** ｜ [← emotion](./emotion.md) ｜ [📚 总索引](./README.md) ｜ [scheduler →](./scheduler.md)
+
+</div>
+
+---
+
 # affection.ts — 好感度 + 悬浮窗
 
 **文件**: `src/affection.ts`（305 行）

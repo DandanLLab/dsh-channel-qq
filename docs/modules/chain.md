@@ -1,3 +1,11 @@
+<div align="center">
+
+⛓️ **chain** ｜ [← services](./services.md) ｜ [📚 总索引](./README.md) ｜ [outbound →](./outbound.md)
+
+</div>
+
+---
+
 # chain.ts — 连锁动作层
 
 **文件**: `src/chain.ts`（233 行）

@@ -1,3 +1,11 @@
+<div align="center">
+
+🎵 **netease-vip** ｜ [← audio-convert](./audio-convert.md) ｜ [📚 总索引](./README.md) ｜ [kugou-api →](./kugou-api.md)
+
+</div>
+
+---
+
 # netease-vip.ts — 网易云音乐
 
 **文件**: `src/netease-vip.ts`（173 行）

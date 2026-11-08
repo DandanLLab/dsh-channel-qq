@@ -1,3 +1,11 @@
+<div align="center">
+
+🧱 **types** ｜ [📚 总索引](./README.md) ｜ [segments →](./segments.md)
+
+</div>
+
+---
+
 # types.ts — OneBot 协议类型契约
 
 **文件**: `src/types.ts`（65 行）

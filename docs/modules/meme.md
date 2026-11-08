@@ -1,3 +1,11 @@
+<div align="center">
+
+😹 **meme** ｜ [← life](./life.md) ｜ [📚 总索引](./README.md)
+
+</div>
+
+---
+
 # meme/ — 表情图库组件（dsh-meme 并入）
 
 **目录**: `src/meme/`（index.ts 适配层 + meme-engine.js/memes.js/anim/panel 原样组件 + 内置图库）

@@ -1,3 +1,11 @@
+<div align="center">
+
+🎶 **kugou-api** ｜ [← netease-vip](./netease-vip.md) ｜ [📚 总索引](./README.md) ｜ [life →](./life.md)
+
+</div>
+
+---
+
 # kugou-api.ts — 酷狗音乐
 
 **文件**: `src/kugou-api.ts`（134 行）

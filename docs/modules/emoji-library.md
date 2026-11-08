@@ -1,3 +1,11 @@
+<div align="center">
+
+🖼️ **emoji-library** ｜ [← tools](./tools.md) ｜ [📚 总索引](./README.md) ｜ [emoji →](./emoji.md)
+
+</div>
+
+---
+
 # emoji-library.ts — 表情收藏库
 
 **文件**: `src/emoji-library.ts`（265 行）

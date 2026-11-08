@@ -1,3 +1,11 @@
+<div align="center">
+
+⚙️ **config** ｜ [← client-compat](./client-compat.md) ｜ [📚 总索引](./README.md) ｜ [bridge →](./bridge.md)
+
+</div>
+
+---
+
 # config.ts — 配置模型与默认值
 
 **文件**: `src/config.ts`（231 行）

@@ -1,3 +1,11 @@
+<div align="center">
+
+📖 **knowledge** ｜ [← emoji](./emoji.md) ｜ [📚 总索引](./README.md) ｜ [dm-gate →](./dm-gate.md)
+
+</div>
+
+---
+
 # knowledge.ts — 会话内知识库
 
 **文件**: `src/knowledge.ts`（319 行）

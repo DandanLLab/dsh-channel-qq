@@ -1,3 +1,11 @@
+<div align="center">
+
+🔊 **audio-convert** ｜ [← stt](./stt.md) ｜ [📚 总索引](./README.md) ｜ [netease-vip →](./netease-vip.md)
+
+</div>
+
+---
+
 # audio-convert.ts — 音频转码 / TTS
 
 **文件**: `src/audio-convert.ts`（511 行）

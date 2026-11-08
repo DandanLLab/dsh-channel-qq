@@ -1,3 +1,11 @@
+<div align="center">
+
+🎙️ **stt** ｜ [← settings-api](./settings-api.md) ｜ [📚 总索引](./README.md) ｜ [audio-convert →](./audio-convert.md)
+
+</div>
+
+---
+
 # stt.ts — 语音转文字
 
 **文件**: `src/stt.ts`（123 行）

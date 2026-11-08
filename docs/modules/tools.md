@@ -1,3 +1,11 @@
+<div align="center">
+
+🛠️ **tools** ｜ [← outbound](./outbound.md) ｜ [📚 总索引](./README.md) ｜ [emoji-library →](./emoji-library.md)
+
+</div>
+
+---
+
 # tools.ts — 72 个 qq_* 工具注册
 
 **文件**: `src/tools.ts`（2022 行，插件最大的模块）

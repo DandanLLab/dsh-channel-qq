@@ -1,3 +1,11 @@
+<div align="center">
+
+📡 **onebot** ｜ [← segments](./segments.md) ｜ [📚 总索引](./README.md) ｜ [client-compat →](./client-compat.md)
+
+</div>
+
+---
+
 # onebot.ts — OneBot 传输层
 
 **文件**: `src/onebot.ts`（256 行）
