@@ -17,6 +17,7 @@ import { searchSongs as kugouSearch, songUrl as kugouSongUrl, qrLoginStart as ku
 import type { OutboundQueue } from './outbound.js'
 import { segmentReply, smartSplitMessage } from './outbound.js'
 import type { SentLog } from './sent-log.js'
+import { runMessageChain } from './chain.js'
 import type { KnowledgeEntry, KnowledgeStore } from './knowledge.js'
 import type { AffectionStore } from './affection.js'
 
@@ -133,7 +134,7 @@ export function isPersonaSignatureLeak(text: string): boolean {
   return list.some(w => lower.includes(w.toLowerCase()))
 }
 
-export function registerQQTools(ctx: Context, config: QQChannelConfig, client: OneBotClient, out: OutboundQueue, log: (line: string) => void, library?: EmojiLibrary, affection?: { book(delta: number, reason: string): Promise<unknown>; setStage(stage: string, event: string): Promise<{ ok: boolean; note: string }>; writeCustomHtml(html: string): Promise<void> }, sentLog?: SentLog, knowledge?: KnowledgeStore, sixDim?: { report(delta: Record<string, number>, note: string): Promise<void> }, dmGate?: { review(action: 'list' | 'approve' | 'deny', userId?: number): Promise<unknown> }): () => void {
+export function registerQQTools(ctx: Context, config: QQChannelConfig, client: OneBotClient, out: OutboundQueue, log: (line: string) => void, library?: EmojiLibrary, affection?: { book(delta: number, reason: string): Promise<unknown>; setStage(stage: string, event: string): Promise<{ ok: boolean; note: string }>; writeCustomHtml(html: string): Promise<void> }, sentLogFor?: (key: string) => Promise<SentLog>, knowledge?: KnowledgeStore, sixDim?: { report(delta: Record<string, number>, note: string): Promise<void> }, dmGate?: { review(action: 'list' | 'approve' | 'deny', userId?: number): Promise<unknown> }): () => void {
   const disposers: Array<() => void> = []
 const memePackMatchFn = (desc: string): string | null => {
   try {
@@ -147,9 +148,9 @@ const memePackMatchFn = (desc: string): string | null => {
         if (!STOP.has(bi)) words.push(bi)
       }
     }
-    const rows = db.prepare('SELECT path, keywords FROM memes').all() as Array<{ path: string; keywords: string }>
+    const rows = db.prepare('SELECT path, caption, keywords FROM memes').all() as Array<{ path: string; caption: string; keywords: string }>
     db.close()
-    // 只匹配 keywords 字段（精标标签），不用长 caption（防常用字误命中）
+    // 两级匹配：先 keywords 精标（阈值≥4），不满则 caption 全文兜底（阈值≥3）
     let best: { path: string; score: number } | null = null
     for (const r of rows) {
       const kw = String(r.keywords || '').toLowerCase()
@@ -158,10 +159,20 @@ const memePackMatchFn = (desc: string): string | null => {
       for (const w of words) { if (kw.includes(w)) score += 2 }
       if (score > (best?.score ?? 0)) best = { path: r.path, score }
     }
-    // 阈值 ≥4 = 至少 2 个独立关键词命中
     if (best && best.score >= 4) {
-      const abs = MEME_PACK_DIR + '/' + best.path
-      return abs
+      return MEME_PACK_DIR + '/' + best.path
+    }
+    // caption 兜底（keywords 标注不全的情绪词，如 吐舌/调皮/哈欠）
+    let bestCap: { path: string; score: number } | null = null
+    for (const r of rows) {
+      const cap = String(r.caption || '').toLowerCase()
+      if (!cap) continue
+      let score = 0
+      for (const w of words) { if (cap.includes(w)) score += (w.length >= 2 ? 1 : 0) }
+      if (score > (bestCap?.score ?? 0)) bestCap = { path: r.path, score }
+    }
+    if (bestCap && bestCap.score >= 2) {
+      return MEME_PACK_DIR + '/' + bestCap.path
     }
     return null
   } catch { return null }
@@ -235,15 +246,16 @@ const memePackMatchFn = (desc: string): string | null => {
   const specs: ToolSpec[] = [
     {
       name: 'qq_send_text',
-      description: '发送一条QQ文本消息。isGroup=true 时 target 为群号，否则为好友QQ号。窗口判断依据：收到消息的注入包里带【本会话是QQ私聊：…】标注=私聊会话，必须 isGroup=false 回私聊；带【群里的新消息】等群标头=群会话。没有窗口标注且无法判断时，先停止发送向发送者确认，禁止凭惯性填参数。',
+      description: '发送一条QQ文本消息。isGroup=true 时 target 为群号，否则为好友QQ号。窗口判断依据：收到消息的注入包里带【本会话是QQ私聊：…】标注=私聊会话，必须 isGroup=false 回私聊；带【群里的新消息】等群标头=群会话。没有窗口标注且无法判断时，先停止发送向发送者确认，禁止凭惯性填参数。text 里可内联连锁动作标记（按出现顺序执行，剩余文字照发）：[表情: 描述] 发表情包；[戳一戳] 私聊戳对方（群聊要 [戳一戳: QQ号]）；[点赞] 或 [点赞: 次数] 给对方点赞1-10次（仅私聊）；[回应: emoji] 给指定消息贴表情回应（需配 reactToId）。',
       parameters: {
         type: 'object',
         properties: {
           isGroup: { type: 'boolean', description: '是否发送到群聊' },
           target: { type: 'number', description: '群号或好友QQ号' },
-          text: { type: 'string', description: '消息文本' },
+          text: { type: 'string', description: '消息文本（可内联 [表情: 描述] / [戳一戳] / [点赞: 次数] / [回应: emoji] 连锁标记）' },
           at: { type: 'array', items: { type: 'number' }, description: '（可选，仅群聊）要艾特的QQ号列表，如 [2524902283]。艾特段只挂第一条消息，不会每段都艾特' },
           atAll: { type: 'boolean', description: '（可选，仅群聊）艾特全体成员（慎用，有次数限制）' },
+          reactToId: { type: 'number', description: '（可选）配合 text 里的 [回应: emoji] 标记：要贴回应的消息#编号' },
         },
         required: ['isGroup', 'target', 'text'],
       },
@@ -262,93 +274,28 @@ const memePackMatchFn = (desc: string): string | null => {
           }
         }
         // 群聊代码禁令：代码块/书源代码不允许出现在群里
-        // 2026-10-25 表情标记拦截：[表情: 描述] 不当文字漏到 QQ——按描述搜收藏库发真图，剥掉标记
-        // 2026-10-25 升级：meme pack 优先（send_meme 候选的 caption 就在 pack 里，描述必须能对上），原生库兜底
-        const emojiMarks: Array<{ desc: string; file: string }> = []
-        // 2026-10-31: 文字表情包解禁——查库落空的标记按文字表情留在消息里,不再整条吞掉
-        const emojiMissTexts: string[] = []
-        const memePackMatch = memePackMatchFn
-        text = text.replace(/\[表情[:：]\s*([^\]]+)\]/g, (_all, desc: string) => {
-          const packPath = memePackMatchFn(String(desc))
-          if (packPath) { emojiMarks.push({ desc: String(desc), file: packPath }); return '' }
-          const hits = library ? library.search(String(desc), 1) : []
-          if (hits.length > 0) { emojiMarks.push({ desc: String(desc), file: hits[0]!.file }); return '' }
-          // 1029 owner 令:词法 MISS 不再静默——转语义兜底标记,让 send 阶段用 meme pack 向量搜最贴的一张
-          emojiMarks.push({ desc: String(desc), file: '__semantic__' + String(desc) })
-          log(`emoji marker LEXMISS→semantic: [${desc}]`)
-          return ''
+        // 2026-11-07 连锁动作层：[表情:]/[戳一戳]/[点赞]/[回应:] 标记按出现顺序执行（src/chain.ts），
+        // 剩余文字照常分段发送；四级查库落空的表情按文字表情留在正文，绝不发空消息。
+        const chain = await runMessageChain(text, {
+          isGroup: args.isGroup === true,
+          target: Number(args.target),
+          log,
+          client,
+          memePackMatch: memePackMatchFn,
+          library,
+          reactMessageId: args.reactToId != null ? Number(args.reactToId) : null,
+          memePackDir: MEME_PACK_DIR,
+          memePackDb: MEME_PACK_DB,
+          semanticKbCli: SEMANTIC_KB_CLI,
+          semanticKbWorkspace: SEMANTIC_KB_WORKSPACE,
         })
-        text = text.replace(/\n{2,}/g, '\n').trim()
-        for (const em of emojiMarks.slice(0, 2)) {
-          try {
-            const fsMod = await import('node:fs/promises')
-            let sendPath = em.file
-            // 1029 owner 令:词法 MISS 先走 meme pack 关键词直搜(dsh-meme 同款:词全命中→bigram 兜底),再落语义
-            if (em.file.startsWith('__semantic__')) {
-              const semDesc: string = em.file.replace('__semantic__', '')
-              try {
-                const db2 = new (require('node:sqlite').DatabaseSync)(MEME_PACK_DB, { readOnly: true })
-                const rows2 = db2.prepare('SELECT path, caption, keywords FROM memes').all()
-                const stop2 = new Set(['一个','这种','这个','就是','已经','可以','还有','还是','那个','什么','怎么','这样','那样','自己','他们','我们','你们','表情','图片','想要','想看'])
-                const toks: string[] = []
-                const d2 = semDesc ?? em.file.replace('__semantic__', '')
-                for (const seg of d2.toLowerCase().split(/[\s，。、！？,.!?/|]+/)) {
-                  const w = seg.trim()
-                  if (w.length >= 2 && !stop2.has(w)) toks.push(w)
-                  for (let i = 0; i + 2 <= w.length; i++) { const bi = w.slice(i, i + 2); if (!stop2.has(bi)) toks.push(bi) }
-                }
-                let best2: { path: string; score: number } | null = null
-                for (const r of rows2) {
-                  const hay = String(r.caption || '') + ' ' + String(r.keywords || '') + ' ' + String(r.path || '')
-                  let sc = 0
-                  for (const w of toks) if (hay.includes(w)) sc += (w.length >= 2 ? 2 : 1)
-                  if (!best2 || sc > best2.score) best2 = { path: r.path, score: sc }
-                }
-                db2.close()
-                if (best2 && best2.score >= 3) {
-                  sendPath = MEME_PACK_DIR + '/' + best2.path
-                  log(`emoji keyword fallback: [${d2}] → ${best2.path} (score ${best2.score})`)
-                }
-              } catch { }
-            }
-            // 语义兜底(关键词也落空才走)
-            if (sendPath.startsWith('__semantic__')) {
-              const { execFile } = await import('node:child_process')
-              const KB2 = SEMANTIC_KB_CLI
-              const semDesc = em.file.replace('__semantic__', '')
-              const semResult: string = await new Promise((resolve) => {
-                try {
-                  execFile(process.execPath, [KB2, 'brain', '表情包 ' + semDesc], { timeout: 30000, windowsHide: true, maxBuffer: 2 << 20, env: { ...process.env, KB_WORKSPACE: SEMANTIC_KB_WORKSPACE } }, (er, so) => resolve(er && !so ? '' : String(so)))
-                } catch { resolve('') }
-              })
-              const semHit = semResult.match(/"file":"([^"]+\.(?:png|gif|jpg|jpeg))"/i)
-              if (semHit && fs.existsSync(semHit[1].replace(/\\/g, '/'))) { sendPath = semHit[1].replace(/\\/g, '/') ; log(`emoji semantic fallback: [${semDesc}] → ${sendPath}`) }
-              else { log(`emoji semantic miss: [${semDesc}] — 查库落空，按文字表情发出`); emojiMissTexts.push('[' + semDesc + ']'); continue }
-            }
-            try {
-              const buf = await fsMod.readFile(sendPath)
-              const isPng = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50
-              const isGif = buf.length > 6 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46
-              const isJpg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8
-              const realExt = isPng ? '.png' : isGif ? '.gif' : isJpg ? '.jpg' : null
-              if (realExt !== null && !sendPath.toLowerCase().endsWith(realExt)) {
-                const tmpPath = sendPath.replace(/\.[^.]+$/, '') + '_send' + realExt
-                await fsMod.writeFile(tmpPath, buf)
-                sendPath = tmpPath
-                setTimeout(() => { fsMod.unlink(tmpPath).catch(() => {}) }, 30_000)
-              }
-            } catch { /* 读不了就按原路径发 */ }
-            const imgBuf = (await import('node:fs/promises')).readFile(sendPath)
-            const b64 = (await imgBuf).toString('base64')
-            const imgMsg = [{ type: 'image', data: { file: `base64://${b64}` } }]
-            const act = args.isGroup === true ? 'send_group_msg' : 'send_private_msg'
-            const pl = args.isGroup === true ? { group_id: args.target, message: imgMsg } : { user_id: args.target, message: imgMsg }
-            await client.call(act, pl as Record<string, unknown>)
-            log(`emoji marker HIT: [${em.desc}] → ${em.file}`)
-          } catch (e) { log(`emoji marker send fail: ${e instanceof Error ? e.message : String(e).slice(0,80)}`) }
+        text = chain.text
+        // 2026-11-07 空消息根治：消息剥完动作标记后一个字不剩时，绝不补发空文本——
+        // NapCat 不拦空消息（照样回 message_id），QQ 客户端收到零内容消息只能渲染成"该消息不支持显示"。
+        if (text === '') {
+          if (chain.stickersSent > 0) return { emojiOnly: true, chain: chain.actions, note: '消息只剩表情标记，图片已发出；不再补发空文本。' }
+          throw new Error('消息剥完表情标记后为空且图片也没发出去，没有内容送达。请带着正文重发。')
         }
-        // 2026-10-31: 查库落空的标记按文字表情补回消息(独立成行,分段器按行切)
-        if (emojiMissTexts.length > 0) text = (text.trimEnd() + '\n' + emojiMissTexts.join('\n')).trim()
         if (args.isGroup === true && /```|<[a-z][a-z0-9]*>|function |const |import |def |#include/i.test(text)) {
           throw new Error('群聊禁止发代码。请改用 qq_send_code_review 把代码私信给主人审核，群里只回一句"已私信主人审核"。')
         }
@@ -384,7 +331,8 @@ const memePackMatchFn = (desc: string): string | null => {
           if (args.atAll === true) atSegs.push({ type: 'at', data: { qq: 'all' } })
         }
         const piecesRaw = config.segmentation.enabled ? segmentReply(text, config) : [text]
-        const pieces = piecesRaw.length > 0 ? piecesRaw : [text]
+        // 2026-11-07：兜底不许从空文本捏出 ['']——空字符串分段照样发出去就是空消息帧
+        const pieces = piecesRaw.length > 0 ? piecesRaw : (text.trim() !== '' ? [text] : [])
         let lastResult: unknown = null
         let atAppended = false
         for (const piece of pieces) {
@@ -398,18 +346,26 @@ const memePackMatchFn = (desc: string): string | null => {
             lastResult = args.isGroup === true
               ? await out.push(() => client.call('send_group_msg', { group_id: args.target, message }))
               : await out.push(() => client.call('send_private_msg', { user_id: args.target, message }))
-            if (sentLog) {
-              const mid = (lastResult as { data?: { message_id?: number } })?.data?.message_id ?? null
-              await sentLog.add({ messageId: typeof mid === 'number' ? mid : null, quotedId: null, text: chunk, time: Date.now() })
+            {
+              // 2026-11-07：发送流水按窗口取账本（私聊 dm-<target>/群聊 group-<target>），
+              // 旧版写死主群 key=私聊串账+罐头度量测不了私聊
+              const sl = sentLogFor ? await sentLogFor(args.isGroup === true ? `group-${Number(args.target)}` : `dm-${Number(args.target)}`).catch(() => null) : null
+              if (sl) {
+                const mid = (lastResult as { data?: { message_id?: number } })?.data?.message_id ?? null
+                await sl.add({ messageId: typeof mid === 'number' ? mid : null, quotedId: null, text: chunk, time: Date.now() })
+              }
             }
           }
+        }
+        if (chain.actions.length > 0 && lastResult !== null && typeof lastResult === 'object') {
+          return { ...(lastResult as Record<string, unknown>), chain: chain.actions }
         }
         return lastResult
       },
     },
     {
       name: 'qq_reply_quote',
-      description: '引用回复某条消息：带上对方消息的#编号发一条引用回复，让对方明确知道咱回应的是哪条。文本里不要重复#编号。',
+      description: '引用回复某条消息：带上对方消息的#编号发一条引用回复，让对方明确知道咱回应的是哪条。文本里不要重复#编号。text 里可内联连锁标记：[表情: 描述] 发表情包；[回应: emoji] 给被引用的这条消息贴表情回应（不用配参数）；标记按序执行，剩余文字照常发送。',
       parameters: {
         type: 'object',
         properties: {
@@ -441,49 +397,30 @@ const memePackMatchFn = (desc: string): string | null => {
           log(`blocked persona-signature leak: ${text.slice(0, 40)}`)
           throw new Error('这段话里冒出了不属于bot的签名词（像别的人格/别的AI在说话），已拦下。用bot自己的自称和口吻重写一遍再发。')
         }
-        // 表情标记拦截（quote 路径）：[表情: 描述] 不当文字漏到 QQ
-        {
-          const emojiMarks: Array<{ desc: string; file: string }> = []
-          text = text.replace(/\[表情[:：]\s*([^\]]+)\]/g, (_all, desc: string) => {
-            const packPath = memePackMatchFn(String(desc))
-            if (packPath) { emojiMarks.push({ desc: String(desc), file: packPath }); return '' }
-            const hits = library ? library.search(String(desc), 1) : []
-            if (hits.length > 0) { emojiMarks.push({ desc: String(desc), file: hits[0]!.file }); return '' }
-            // 2026-10-31: 查库落空按文字表情发出(quote 路径无语义兜底,miss 即终局)
-            return '[' + String(desc) + ']'
-          })
-          text = text.replace(/\n{2,}/g, '\n').trim()
-          for (const em of emojiMarks.slice(0, 2)) {
-            try {
-              const fsMod = await import('node:fs/promises')
-              let sendPath = em.file
-              try {
-                const buf = await fsMod.readFile(sendPath)
-                const isPng = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50
-                const isGif = buf.length > 6 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46
-                const isJpg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8
-                const realExt = isPng ? '.png' : isGif ? '.gif' : isJpg ? '.jpg' : null
-                if (realExt !== null && !sendPath.toLowerCase().endsWith(realExt)) {
-                  const tmpPath = sendPath.replace(/\.[^.]+$/, '') + '_send' + realExt
-                  await fsMod.writeFile(tmpPath, buf)
-                  sendPath = tmpPath
-                  setTimeout(() => { fsMod.unlink(tmpPath).catch(() => {}) }, 30_000)
-                }
-              } catch { /* 读不了就按原路径发 */ }
-              const imgData = (await import('node:fs/promises')).readFile(sendPath)
-              const b64 = (await imgData).toString('base64')
-              const mime = sendPath.endsWith('.gif') ? 'image/gif' : sendPath.endsWith('.png') ? 'image/png' : 'image/jpeg'
-              const imgMsg = [{ type: 'image', data: { file: `base64://${b64}` } }]
-              const act = args.isGroup === true ? 'send_group_msg' : 'send_private_msg'
-              const pl = args.isGroup === true ? { group_id: args.target, message: imgMsg } : { user_id: args.target, message: imgMsg }
-              await client.call(act, pl as Record<string, unknown>)
-              log(`emoji marker HIT (quote): [${em.desc.slice(0, 30)}]`)
-            } catch (e) { log(`emoji marker send fail (quote): ${e instanceof Error ? e.message : String(e).slice(0, 80)}`) }
-          }
-        }
+        // 2026-11-07 连锁动作层（quote 路径）：[表情:]/[回应:] 等标记按序执行，[回应:] 默认贴在被引用消息上
+        const chain = await runMessageChain(text, {
+          isGroup: args.isGroup === true,
+          target: Number(args.target),
+          log,
+          client,
+          memePackMatch: memePackMatchFn,
+          library,
+          reactMessageId: Number(args.messageId),
+          memePackDir: MEME_PACK_DIR,
+          memePackDb: MEME_PACK_DB,
+          semanticKbCli: SEMANTIC_KB_CLI,
+          semanticKbWorkspace: SEMANTIC_KB_WORKSPACE,
+        })
+        text = chain.text
         // 2026-09-26 主人令：引用回复同样智能分段——引用只挂第一段
+        // 2026-11-07 空消息根治（quote 路径）：剥完动作标记后正文为空就到此为止，不发空引用
+        if (text === '') {
+          if (chain.stickersSent > 0) return { emojiOnly: true, chain: chain.actions, note: '回复只剩表情标记，图片已发出（未挂引用）；不再补发空文本。' }
+          throw new Error('回复剥完表情标记后为空且图片也没发出去，没有内容送达。请带着正文重发。')
+        }
         const piecesRaw = config.segmentation.enabled ? segmentReply(text, config) : [text]
-        const pieces = piecesRaw.length > 0 ? piecesRaw : [text]
+        // 2026-11-07：兜底不许从空文本捏出 ['']——空字符串分段照样发出去就是空消息帧
+        const pieces = piecesRaw.length > 0 ? piecesRaw : (text.trim() !== '' ? [text] : [])
         let lastResult: unknown = null
         let first = true
         for (const piece of pieces) {
@@ -495,11 +432,18 @@ const memePackMatchFn = (desc: string): string | null => {
             lastResult = args.isGroup === true
               ? await out.push(() => client.call('send_group_msg', { group_id: args.target, message }))
               : await out.push(() => client.call('send_private_msg', { user_id: args.target, message }))
-            if (sentLog) {
-              const mid = (lastResult as { data?: { message_id?: number } })?.data?.message_id ?? null
-              await sentLog.add({ messageId: typeof mid === 'number' ? mid : null, quotedId: first ? Number(args.messageId) || null : null, text: chunk, time: Date.now() })
+            {
+              // 2026-11-07：quote 路径同款——按窗口取发送流水账本
+              const sl = sentLogFor ? await sentLogFor(args.isGroup === true ? `group-${Number(args.target)}` : `dm-${Number(args.target)}`).catch(() => null) : null
+              if (sl) {
+                const mid = (lastResult as { data?: { message_id?: number } })?.data?.message_id ?? null
+                await sl.add({ messageId: typeof mid === 'number' ? mid : null, quotedId: first ? Number(args.messageId) || null : null, text: chunk, time: Date.now() })
+              }
             }
           }
+        }
+        if (chain.actions.length > 0 && lastResult !== null && typeof lastResult === 'object') {
+          return { ...(lastResult as Record<string, unknown>), chain: chain.actions }
         }
         return lastResult
       },

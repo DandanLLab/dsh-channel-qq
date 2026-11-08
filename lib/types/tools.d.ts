@@ -21,7 +21,7 @@ export declare function registerQQTools(ctx: Context, config: QQChannelConfig, c
         note: string;
     }>;
     writeCustomHtml(html: string): Promise<void>;
-}, sentLog?: SentLog, knowledge?: KnowledgeStore, sixDim?: {
+}, sentLogFor?: (key: string) => Promise<SentLog>, knowledge?: KnowledgeStore, sixDim?: {
     report(delta: Record<string, number>, note: string): Promise<void>;
 }, dmGate?: {
     review(action: 'list' | 'approve' | 'deny', userId?: number): Promise<unknown>;

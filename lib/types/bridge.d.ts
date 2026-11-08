@@ -26,6 +26,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { QQChannelConfig } from './config.js';
 import { OutboundQueue } from './outbound.js';
 import type { OneBotClient } from './onebot.js';
+import { SentLog } from './sent-log.js';
 import type { OneBotEvent } from './types.js';
 export interface ReplyListener {
     (isGroup: boolean, chatId: number): void;
@@ -117,7 +118,8 @@ export declare class ConversationBridge {
     private ensureConversationInner;
     /** Master-only admin prompt: submit one packet into the master's DM session. */
     adminPrompt(prompt: string): Promise<void>;
-    private sentLogFor;
+    /** 2026-11-07 开 public：tools 层按窗口取发送流水账本（私聊不再串进群文件） */
+    sentLogFor(key: string): Promise<SentLog>;
     private ensureWorkspace;
     private submit;
 }

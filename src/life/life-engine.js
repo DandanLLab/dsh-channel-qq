@@ -275,6 +275,10 @@ ctx.logger?.info?.('tongling-life: sections registered — budget: seed 32KB / g
   const alarmsFile = () => path.join(lifeDir(), 'alarms.json')
   function readAlarms() { try { return JSON.parse(fs.readFileSync(alarmsFile(), 'utf8')) } catch { return { alarms: [] } } }
   function writeAlarms(j) { fs.mkdirSync(lifeDir(), { recursive: true }); fs.writeFileSync(alarmsFile(), JSON.stringify(j, null, 1)) }
+  // 2026-11-02 修:dayTag 原先只在 dailySelfPortrait() 内层定义,外层 appendLifeEvent 等调用点
+  // 全部 ReferenceError → idle≥15min 睡眠巩固首火即崩进程(boot+15min 自杀循环立案根因)。
+  // 这里提升到共享作用域;内层那份是同实现的影子,保留不动。与 lib/life 同步改。
+  function dayTag() { const d = new Date(); return `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}` }
   function appendLifeEvent(ev) {
     const tag = dayTag()
     const dir = path.join(lifeDir(), tag)

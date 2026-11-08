@@ -99,6 +99,8 @@ export interface QQChannelConfig {
   selfId: number
   /** QQ numbers allowed to use admin-flavoured tools. */
   admins: number[]
+  /** 真实的主人QQ号(2026-11-08 owner order)：区别于QQ群主/管理员平台角色——群里消息带[主人]标，唯一指令权威。空则回落 admins[0]。 */
+  master?: number | null
   /** Master switch for group-chat handling (DMs unaffected). */
   /** Loopback port of the master-only affection dashboard; 0 disables. */
   affectionPort: number

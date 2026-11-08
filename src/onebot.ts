@@ -72,6 +72,19 @@ export class OneBotClient extends EventEmitter {
 
   /** One OneBot API call; resolves with `data` on ok, rejects on failure or timeout. */
   async call(action: string, params: Record<string, unknown> = {}, timeoutMs = 30_000): Promise<unknown> {
+    // 2026-11-07 空消息拦截（总闸）：send_*_msg 的 message 数组若没有任何可渲染内容
+    //（没有 image/record/at/face 等非文本段，且所有 text 段全是空白）直接拒发——
+    // NapCat 不拦空消息（照样回 message_id），QQ 客户端收到零内容消息只能渲染成"该消息不支持显示"。
+    if (action === 'send_private_msg' || action === 'send_group_msg') {
+      const message = params.message
+      if (Array.isArray(message) && !message.some((seg) => {
+        const s = seg as { type?: string; data?: { text?: string } }
+        if (s?.type !== 'text') return true // 非文本段 = 可渲染内容
+        return typeof s.data?.text === 'string' && s.data.text.trim() !== ''
+      })) {
+        throw new Error('空消息拦截：message 数组里没有任何可渲染内容（空文本帧会让 QQ 显示"该消息不支持显示"），已拒发。')
+      }
+    }
     // Brief reconnect grace: a dropped socket usually comes back within a few
     // seconds (NapCat re-dials the reverse server). Wait up to 12s instead of
     // failing the agent's action on the first blip.

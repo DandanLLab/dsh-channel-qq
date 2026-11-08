@@ -174,11 +174,12 @@ async function cmdBrain(query, agentArg) {
   const out = []
   const scopes = agentArg ? ['', agentArg] : (process.env.KB_AGENTS || 'tongling,today,host').split(',').map(s2 => s2.trim()).filter(Boolean).concat([''])
   const regions = { tongling: '姐姐库', today: 'today库', host: '工程台库', '': '公共库' }
+  const kbFiles = []
   for (const sc of scopes) {
     if (!isNewKb(sc)) continue
     try {
       const scored = await kbScoreAll(qv, null, sc)
-      for (const x of scored.slice(0, 3)) if (x.s > 0.30) out.push({ region: regions[sc] || sc, file: x.r.file, text: x.r.text.replace(/\s+/g, ' ').slice(0, 100), s: Number(x.s.toFixed(3)) })
+      for (const x of scored.slice(0, 3)) if (x.s > 0.30) { out.push({ region: regions[sc] || sc, file: x.r.file, text: x.r.text.replace(/\s+/g, ' ').slice(0, 100), s: Number(x.s.toFixed(3)) }); kbFiles.push(x.r.file) }
     } catch { }
   }
   if (existsSync(SES_INDEX)) {
@@ -188,6 +189,10 @@ async function cmdBrain(query, agentArg) {
   for (const g of graphActivate(query, 6)) out.push({ region: '激活' + (g.kind || ''), file: String(g.file).slice(0, 60), text: (g.text || '').slice(0, 100), s: Number((g.s ?? 0).toFixed(3)) })
   out.sort((a, b) => b.s - a.s)
   try { graphEdgesAppend(query, out.slice(0, 4).map(x => ({ file: x.file, s: x.s }))) } catch { }
+  // 2026-11-02 修:重放闭环——P0-3 睡眠重放走 brain 命令,life-engine 注释声称"brain 会自动 recentMark",
+  // 实际只有 cmdSearch 接了 → 重放从不进 .kb-recent.json,状态机 ACTIVE/遗忘曲线逆操作吃不到重放。
+  // 与 cmdSearch 同款:只标 kb 路真文件(前6),记忆流/图谱边的伪路径不入账。与 lib/life 同步改。
+  try { recentMark(kbFiles.slice(0, 6)) } catch { }
   console.log(JSON.stringify({ query, agent: agentArg || '全脑', ms: Date.now() - t0, hits: out.slice(0, 12) }))
 }
 // ②关联边自积累:每次检索把"查询词→命中文件"写成图谱边(graph.jsonl),graphRecall 未来据此联想(用得越多图越厚)
@@ -272,6 +277,28 @@ async function writeSharded(rows, agent = KB_AGENT, oldBins = null) {
   const fsx = require('node:fs')
   const dir = kbScope(agent).dir
   try { mkdirSync(dir, { recursive: true }) } catch { }
+  // 自检闸前置(1102 毒化事故令):写入前预检回填缺口——有行需要回填而 oldBins 缺位/短读,
+  // 直接硬失败,一个字节都不落盘。旧版容忍 null 静默写零 + bin 就地覆盖,一次瞬时读失败
+  // 就把整库向量毒化且链式不可逆(1102 实祸:0-8片全零)。与 lib/life 同步改。
+  {
+    // 全零 bin 视同缺位(1102 毒化事故令):毒 bin 读得出来但全是零,拿它回填=写零,
+    // 所以预检不只要看"文件在不在",还要看"里面有没有活向量"。与 lib/life 同步改。
+    const deadBins = (oldBins || []).map((b) => {
+      if (!b) return true
+      for (let i = 0; i + 3 < b.length; i += 4) if (b.readFloatLE(i) !== 0) return false
+      return true
+    })
+    let needBackfill = 0, missBackfill = 0
+    for (const r of rows) {
+      if (r.v || r._vi === undefined) continue
+      needBackfill++
+      const si = Math.floor(r._vi / SHARD_SIZE)
+      const ob = oldBins ? oldBins[si] : null
+      const off = (r._vi % SHARD_SIZE) * KB_DIM * 4
+      if (!ob || deadBins[si] || ob.length < off + KB_DIM * 4) missBackfill++
+    }
+    if (missBackfill > 0) throw new Error(`自检前置失败: ${needBackfill} 行需回填其中 ${missBackfill} 行旧bin缺位或全零——拒绝增量重写(防毒化),请排查后重试或全量重建`)
+  }
   const shards = []
   const nShards = Math.max(1, Math.ceil(rows.length / SHARD_SIZE))
   for (let s = 0; s < nShards; s++) {
@@ -286,14 +313,17 @@ async function writeSharded(rows, agent = KB_AGENT, oldBins = null) {
       let vec = v
       if (!vec && _vi !== undefined && oldBins) {
         const ob = oldBins[Math.floor(_vi / SHARD_SIZE)]
-        if (ob) { const off = (_vi % SHARD_SIZE) * KB_DIM * 4; if (ob.length >= off + KB_DIM * 4) vec = ob.subarray(off, off + KB_DIM * 4) }
+        // 1102 修:Buffer 下标取的是字节不是浮点,旧写法 writeFloatLE(字节)=垃圾向量且非零(自检闸看不见,
+        // 1029 以来未变更文件的向量可能一直被静默毒化)。Float32Array 视图才是正确的 float32 解码。与 lib 同步。
+        if (ob) { const off = (_vi % SHARD_SIZE) * KB_DIM * 4; if (ob.length >= off + KB_DIM * 4) vec = new Float32Array(ob.buffer, ob.byteOffset + off, KB_DIM) }
       }
       for (let i = 0; i < KB_DIM; i++) b.writeFloatLE((vec && vec[i]) || 0, i * 4)
       bins.push(b)
     }
     await new Promise((r) => wt.end(r))
     fsx.renameSync(jsonl + '.tmp', jsonl)
-    fsx.writeFileSync(bin, Buffer.concat(bins))
+    fsx.writeFileSync(bin + '.tmp', Buffer.concat(bins))
+    fsx.renameSync(bin + '.tmp', bin)
     shards.push({ n: s, chunks: part.length, jsonlBytes: statSync(jsonl).size, binBytes: statSync(bin).size })
   }
   const man = { version: 2, dim: KB_DIM, shardSize: SHARD_SIZE, total: rows.length, builtAt: new Date().toISOString(), shards }
