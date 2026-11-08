@@ -137,10 +137,45 @@ async function runSticker(deps: ChainDeps, desc: string): Promise<boolean> {
 
 let lastHitSticker = ''
 
+/**
+ * 1109 漏后括号容错（师父令）：模型偶尔漏写标记的后括号（`[表情: 猫猫敬礼` 直接收尾），
+ * 原 tagRe 要求闭合 `]`，漏括号时整个标记不匹配 → 原文带 `[表情:` 直漏 QQ。
+ * 扫描前补齐：开标记到下一个 `[` 或字符串尾之间没有 `]`（也没有全角 `］`），
+ * 就在第一个换行处（如有）或段尾补 `]`。已闭合的标记原样不动。
+ */
+export function balanceTagBrackets(s: string): string {
+  // 全角闭括号先归一（只动四类标记的段内，避免误伤正文里的全角括号）
+  let text = s.replace(/\[(表情|戳一戳|点赞|回应)((?:[:：][^\]］]*)?)］/g, '[$1$2]')
+  let out = ''
+  let i = 0
+  const openRe = /\[(?:表情|戳一戳|点赞|回应)[:：]?/g
+  while (i <= text.length) {
+    const m = openRe.exec(text)
+    if (m === null) { out += text.slice(i); break }
+    const start = m.index
+    out += text.slice(i, start)
+    const nextOpen = text.indexOf('[', start + 1)
+    const segEnd = nextOpen === -1 ? text.length : nextOpen
+    const seg = text.slice(start, segEnd)
+    if (seg.includes(']')) {
+      out += seg
+    } else {
+      const nl = seg.indexOf('\n')
+      const cut = nl === -1 ? seg.length : nl
+      out += seg.slice(0, cut) + ']' + seg.slice(cut)
+    }
+    i = segEnd
+    openRe.lastIndex = segEnd
+  }
+  return out
+}
+
 export async function runMessageChain(rawText: string, deps: ChainDeps): Promise<ChainOutcome> {
   const actions: ChainActionLog[] = []
   let stickersSent = 0
   const missTexts: string[] = []
+
+  rawText = balanceTagBrackets(rawText)
 
   // 单趟扫描：四类标记按出现顺序执行（同名标记可重复）
   const tagRe = /\[(表情|戳一戳|点赞|回应)[:：]?\s*([^\]]*)\]/g

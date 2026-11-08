@@ -29,4 +29,11 @@ export interface ChainOutcome {
     stickersSent: number;
     actions: ChainActionLog[];
 }
+/**
+ * 1109 漏后括号容错（师父令）：模型偶尔漏写标记的后括号（`[表情: 猫猫敬礼` 直接收尾），
+ * 原 tagRe 要求闭合 `]`，漏括号时整个标记不匹配 → 原文带 `[表情:` 直漏 QQ。
+ * 扫描前补齐：开标记到下一个 `[` 或字符串尾之间没有 `]`（也没有全角 `］`），
+ * 就在第一个换行处（如有）或段尾补 `]`。已闭合的标记原样不动。
+ */
+export declare function balanceTagBrackets(s: string): string;
 export declare function runMessageChain(rawText: string, deps: ChainDeps): Promise<ChainOutcome>;
