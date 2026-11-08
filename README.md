@@ -285,6 +285,7 @@ node scripts/daily-report.mjs --date 2026-09-26
 
 | 文档 | 内容 |
 |---|---|
+| [docs/modules/](docs/modules/README.md) | **模块文档总索引**（26 篇，每模块一篇：职责/机制/模块连接） |
 | [docs/emoji-pipeline.md](docs/emoji-pipeline.md) | 表情包完整方案（入库三闸/严格后缀/MISS 兜底） |
 | [docs/cache-stabilization.md](docs/cache-stabilization.md) | system prompt 缓存率稳定化（冻结机制/底座投影/验证方法） |
 | [docs/daytag-crash-immunity.md](docs/daytag-crash-immunity.md) | 已知问题免疫说明（15 分钟崩溃，v0.3.4+ 已修） |
