@@ -164,6 +164,8 @@ export interface DmGateConfig {
   notifyAdmin: boolean
   /** 待审通过前的统一回复文案。 */
   pendingReply: string
+  /** 陌生群预警：机器人在白名单外的群收到消息时私聊通知主人。群多时会很吵，可关。 */
+  groupAlert: boolean
 }
 
 export interface LifeEngineComponentConfig {
@@ -208,6 +210,7 @@ export const DEFAULT_CONFIG: QQChannelConfig = {
     enabled: true,
     allowList: [],
     notifyAdmin: true,
+    groupAlert: true,
     pendingReply: '你好呀，这是一台私人助手，不接陌生人会话。如果你认识主人，请让他加我好友或告知我放行～',
   },
   debug: false,

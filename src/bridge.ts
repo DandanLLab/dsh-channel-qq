@@ -487,7 +487,7 @@ ${prompt}`)
     // 陌生群预警：机器人在非白名单群收到消息时给主人发预警（本插件不会在这些群发言）
     if (event.message_type === 'group' && typeof event.group_id === 'number' && this.dmGate !== null) {
       const allowed = event.group_id === this.config.primaryGroup || (this.config.extraGroups ?? []).includes(event.group_id)
-      if (!allowed) {
+      if (!allowed && this.config.dmGate.groupAlert !== false) {
         const gid = event.group_id
         void this.dmGate.alert(
           '【陌生群预警】机器人在未配置的群 ' + gid + ' 收到消息（说话人 QQ' + (event.user_id ?? '?') + '）。若不是你拉的群请检查；可在群设置移除机器人，或把群号加进 extraGroups 放行。',
