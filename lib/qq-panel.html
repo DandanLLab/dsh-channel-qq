@@ -593,6 +593,7 @@ const CFG_GROUPS = [
     { k: 'dmGate.allowList', label: '门控放行名单（逗号分隔）', type: 'array' },
     { k: 'dmGate.enabled', label: '陌生人门控', type: 'boolean', hint: '陌生人待审 + 主人通知' },
     { k: 'dmGate.notifyAdmin', label: '待审通知主人', type: 'boolean' },
+    { k: 'dmGate.groupAlert', label: '陌生群预警', type: 'boolean', hint: '白名单外的群来消息时私聊通知主人；群多时可关' },
     { k: 'dmGate.pendingReply', label: '给陌生人的统一回复', type: 'string' },
   ]},
   { id: 'fun', fields: [

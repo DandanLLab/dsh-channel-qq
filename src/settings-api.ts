@@ -70,6 +70,7 @@ const HOT_SCALARS: Record<string, 'number' | 'boolean' | 'string' | 'string?' | 
   // 陌生人门控
   'dmGate.enabled': 'boolean',
   'dmGate.notifyAdmin': 'boolean',
+  'dmGate.groupAlert': 'boolean',
   'dmGate.pendingReply': 'string',
   'dmGate.allowList': 'number[]',
   // 会话（对新建窗口生效；存量会话保持原样）

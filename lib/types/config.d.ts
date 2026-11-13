@@ -152,6 +152,8 @@ export interface DmGateConfig {
     notifyAdmin: boolean;
     /** 待审通过前的统一回复文案。 */
     pendingReply: string;
+    /** 陌生群预警：机器人在白名单外的群收到消息时私聊通知主人。群多时会很吵，可关。 */
+    groupAlert: boolean;
 }
 export interface LifeEngineComponentConfig {
     /** Master switch for the bundled life-engine component; default true. */
