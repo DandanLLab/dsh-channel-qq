@@ -19,4 +19,5 @@ export declare function registerSettingsApi(ctx: Context, config: QQChannelConfi
         url: string;
     };
     isConnected?: () => boolean;
+    forceReconnect?: () => void;
 }): () => void;

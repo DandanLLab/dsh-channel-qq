@@ -96,7 +96,8 @@ export function detectClient(info: { app_name?: string; app_version?: string; ve
   const version = String(info?.app_version ?? info?.version ?? info?.protocol_version ?? '')
   const hay = `${appName} ${version}`.toLowerCase()
   let kind: ClientKind = 'unknown'
-  if (hay.includes('napcat') || hay.includes('猫') || hay.includes('catclient')) kind = 'napcat'
+  if (hay.includes('snowcat') || hay.includes('雪猫')) kind = 'napcat'  // SnowCat = NapCat 分支，能力矩阵同 NapCat
+  else if (hay.includes('napcat') || hay.includes('猫') || hay.includes('catclient')) kind = 'napcat'
   else if (hay.includes('snowluma')) kind = 'snowluma'
   else if (hay.includes('lagrange') || hay.includes('幽灵') || hay.includes('ghost')) kind = 'lagrange'
   else if (hay.includes('llonebot') || hay.includes('liteoader')) kind = 'llonebot'
@@ -122,5 +123,6 @@ export function describeClient(id: ClientIdentity): string {
     'go-cqhttp': 'go-cqhttp 系（老牌，无 NTQQ 扩展）',
     unknown: '未知 OneBot 实现（按标准动作对待）',
   }
-  return `${c[id.kind]}${id.version ? ` · ${id.version.slice(0, 40)}` : ''}`
+  const base = /snowcat|雪猫/i.test(id.appName) ? 'SnowCat（NapCat 分支，能力同 NapCat）' : c[id.kind]
+  return `${base}${id.version ? ` · ${id.version.slice(0, 40)}` : ''}`
 }

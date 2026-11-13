@@ -1,0 +1,1105 @@
+<!doctype html>
+<!-- dsh-channel-qq 控制台（官方版）：单文件、零依赖、仅回环。
+     布局：侧边栏导航 + 视图区（概览/连接/会话/门控/配置/文件/日志）。
+     设计：扁平专业风格（主色 #2563eb、灰阶层次、克制圆角），
+     动效：视图过渡/磁贴数字滚动/骨架屏/入场 stagger/悬浮抬升/开关弹簧。
+     加视图 = VIEWS 加一项；加配置字段 = CFG_GROUPS 加一行。 -->
+<html lang="zh-CN" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>控制台 · dsh-channel-qq</title>
+<style>
+:root {
+  --bg: #f4f5f9; --card: #ffffff; --bg2: #eceef5; --card2: #f4f5f9;
+  --line: #dfe1e6; --line2: #cfd3db; --line-hover: #b8bfcc;
+  --tx: #242529; --tx2: #505158; --tx3: #92959c;
+  --acc: #2563eb; --acc-soft: #e8effd;
+  --ok: #167b69; --ok-soft: #e4f3f0;
+  --warn: #b7791f; --warn-soft: #f7efdd;
+  --err: #e5484d; --err-soft: #fdeaea;
+  --purple: #8b7bd8;
+  --shadow: 0 1px 2px rgba(36,37,41,.05), 0 1px 6px rgba(36,37,41,.04);
+  --shadow-hover: 0 2px 6px rgba(36,37,41,.08), 0 8px 24px rgba(36,37,41,.08);
+  --r: 10px; --mono: ui-monospace, Consolas, 'Cascadia Mono', monospace;
+  --side-w: 216px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181c; --card: #1f2024; --bg2: #242529; --card2: #242529;
+    --line: #303136; --line2: #3d3e44; --line-hover: #4d4f57;
+    --tx: #e8e8ea; --tx2: #a0a1a8; --tx3: #6f7078;
+    --acc: #4d82f0; --acc-soft: #1d2a44;
+    --ok: #36a582; --ok-soft: #16281f;
+    --warn: #d19a3a; --warn-soft: #2c2414;
+    --err: #e5484d; --err-soft: #2e1415;
+    --purple: #8b7bd8;
+    --shadow: 0 1px 2px rgba(0,0,0,.25);
+    --shadow-hover: 0 2px 8px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181c; --card: #1f2024; --bg2: #242529; --card2: #242529;
+  --line: #303136; --line2: #3d3e44; --line-hover: #4d4f57;
+  --tx: #e8e8ea; --tx2: #a0a1a8; --tx3: #6f7078;
+  --acc: #4d82f0; --acc-soft: #1d2a44;
+  --ok: #36a582; --ok-soft: #16281f;
+  --warn: #d19a3a; --warn-soft: #2c2414;
+  --err: #e5484d; --err-soft: #2e1415;
+  --purple: #8b7bd8;
+  --shadow: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,.4);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--tx);
+  background: var(--bg); font: 13.5px/1.6 system-ui, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  transition: background .3s ease, color .3s ease; }
+.shell { display: flex; min-height: 100vh; }
+
+/* ============ 侧边栏 ============ */
+aside.side { width: var(--side-w); flex: 0 0 var(--side-w); position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column;
+  transition: background .3s, border-color .3s; }
+.brand { padding: 16px 16px 13px; border-bottom: 1px solid var(--line); }
+.brand .name { font-size: 13.5px; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
+.brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tx3); transition: background .3s, box-shadow .3s; flex: 0 0 8px; }
+.brand .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent); animation: pulse 2.6s infinite; }
+.brand .dot.bad { background: var(--err); box-shadow: 0 0 0 3px color-mix(in srgb, var(--err) 18%, transparent); }
+@keyframes pulse { 50% { opacity: .5 } }
+.brand .sub { font-size: 11px; color: var(--tx3); margin-top: 2px; padding-left: 16px; }
+
+nav.side-nav { flex: 1; padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+.nav-group { font-size: 10.5px; color: var(--tx3); letter-spacing: 1px; padding: 12px 10px 4px; text-transform: uppercase; }
+.nav-item { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  color: var(--tx2); font-size: 13.5px; transition: background .15s, color .15s; user-select: none; }
+.nav-item svg { width: 15px; height: 15px; flex: 0 0 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s, transform .18s cubic-bezier(.2,.9,.3,1.2); }
+.nav-item:hover { background: var(--bg2); color: var(--tx); }
+.nav-item:hover svg { transform: translateX(1px) }
+.nav-item.on { background: var(--acc-soft); color: var(--acc); font-weight: 600; }
+.nav-item.on::before { content: ''; position: absolute; left: -8px; top: 7px; bottom: 7px; width: 3px; border-radius: 3px;
+  background: var(--acc); transform: scaleY(1); transition: transform .2s; }
+.nav-item .badge { margin-left: auto; font-size: 11px; font-weight: 600; background: var(--err); color: #fff; border-radius: 99px; padding: 0 7px; line-height: 17px; display: none; }
+.nav-item .badge.on { display: inline-block; animation: badgeIn .25s cubic-bezier(.2,.9,.3,1.4) }
+@keyframes badgeIn { from { transform: scale(.5); opacity: 0 } }
+.side-foot { padding: 10px 12px 13px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; }
+.footlink { font-size: 11.5px; color: var(--tx3); cursor: pointer; padding: 4px 9px; border-radius: 7px; border: 1px solid transparent; transition: all .16s; user-select: none; }
+.footlink:hover { color: var(--acc); background: var(--bg2); }
+a.footlink { text-decoration: none; }
+
+/* ============ 内容区 ============ */
+.content { flex: 1; min-width: 0; padding: 14px 24px 90px; }
+header.top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 2px 14px; }
+header.top h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+.chip { font-size: 11.5px; padding: 3px 10px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--tx2); white-space: nowrap; transition: all .2s; }
+.chip.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 30%, var(--line)); background: var(--ok-soft); }
+.chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, var(--line)); background: var(--warn-soft); }
+.chip.mono { font-family: var(--mono); font-size: 11px; }
+
+section[data-view] { display: none; }
+section[data-view].on { display: block; animation: viewIn .3s cubic-bezier(.2,.7,.3,1); }
+@keyframes viewIn { from { opacity: 0; transform: translateY(7px) } }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 14px 16px 15px; box-shadow: var(--shadow); margin-bottom: 13px;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .3s ease;
+  animation: cardIn .4s cubic-bezier(.2,.7,.3,1) backwards; }
+.card:hover { transform: translateY(-1px); border-color: var(--line-hover); box-shadow: var(--shadow-hover); }
+.card:nth-child(1) { animation-delay: .02s } .card:nth-child(2) { animation-delay: .05s }
+.card:nth-child(3) { animation-delay: .08s } .card:nth-child(4) { animation-delay: .11s }
+@keyframes cardIn { from { opacity: 0; transform: translateY(8px) } }
+@keyframes fadeSlide { from { opacity: 0; transform: translateY(-3px) } }
+
+.card h2 { margin: 0 0 10px; font-size: 12px; color: var(--tx2); font-weight: 600; letter-spacing: .8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card h2 .op { display: flex; gap: 7px; align-items: center; }
+.dirty-chip { display: none; font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--line)); }
+.dirty-chip.on { display: inline-block; animation: fadeSlide .2s; }
+
+button { background: var(--acc); border: 1px solid transparent; color: #fff; padding: 6px 13px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  transition: transform .12s ease, filter .15s ease, background .2s, opacity .2s, box-shadow .15s; }
+button:hover { filter: brightness(1.07); box-shadow: 0 2px 8px color-mix(in srgb, var(--acc) 35%, transparent); }
+button:active { transform: scale(.96); }
+button.ghost { background: var(--card); border-color: var(--line2); color: var(--tx2); }
+button.ghost:hover { color: var(--tx); border-color: var(--acc); box-shadow: none; filter: none; }
+button.mini { padding: 2px 10px; font-size: 12px; border-radius: 7px; }
+button.ok { background: var(--ok); } button.err { background: var(--err); }
+button:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+
+input[type=text], input[type=number], input[type=password] {
+  background: var(--bg); border: 1px solid var(--line2); color: var(--tx);
+  border-radius: 8px; padding: 7px 10px; font-size: 13px; width: 100%;
+  transition: border-color .15s, box-shadow .15s, background .3s, color .3s; }
+input:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent); }
+input.dirty { border-color: var(--warn); }
+
+/* 配置分组 pills */
+.pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.pill { padding: 6px 15px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); color: var(--tx2); font-size: 13px; cursor: pointer;
+  transition: all .18s cubic-bezier(.2,.7,.3,1); user-select: none; }
+.pill:hover { border-color: var(--acc); color: var(--acc); transform: translateY(-1px); }
+.pill.on { background: var(--acc); border-color: var(--acc); color: #fff; font-weight: 600; box-shadow: 0 2px 8px color-mix(in srgb, var(--acc) 30%, transparent); }
+.pill .dirty-dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); margin-left: 6px; vertical-align: 1px; }
+.pill.on .dirty-dot { background: #ffd166; }
+.pill .dirty-dot.on { display: inline-block; }
+
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 9px 14px; }
+.field { background: var(--card2); border: 1px solid transparent; border-radius: 9px; padding: 9px 12px; transition: border-color .18s, background .3s; }
+.field:hover { border-color: var(--line); }
+.field .lbl { font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
+.field .hint { font-size: 11px; color: var(--tx3); margin-top: 4px; }
+
+/* 开关滑块 */
+.switchrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.switchrow .meta { min-width: 0; }
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; flex: 0 0 40px; cursor: pointer; }
+.switch input { display: none; }
+.switch .track { position: absolute; inset: 0; border-radius: 99px; background: var(--line2); transition: background .22s; }
+.switch .thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.2,.9,.3,1.4); }
+.switch input:checked + .track { background: var(--acc); }
+.switch input:checked + .track .thumb { transform: translateX(18px); }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 25%, transparent); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--tx3); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; font-size: 11.5px; letter-spacing: .4px; }
+td { padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); }
+tbody tr { transition: background .14s; cursor: default; } tbody tr:hover { background: var(--bg2); }
+tr:last-child td { border-bottom: 0; }
+tr.clickable { cursor: pointer; }
+tbody tr { animation: rowIn .25s backwards; }
+tbody tr:nth-child(n+9) { animation-delay: .02s } tbody tr:nth-child(n+13) { animation-delay: .04s }
+@keyframes rowIn { from { opacity: 0; transform: translateX(-3px) } }
+
+.kv { display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px; font-size: 13px; }
+.kv .k { color: var(--tx3); }
+.kv .v { word-break: break-all; }
+
+.caps-wrap { overflow: hidden; }
+.caps-wrap.show { animation: fadeSlide .28s ease; }
+.caps { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 3px 14px; font-family: var(--mono); font-size: 11.5px; margin-top: 10px; }
+.caps span { display: flex; gap: 7px; padding: 2px 0; }
+.caps .y { color: var(--ok); } .caps .n { color: var(--err); } .caps .u { color: var(--tx3); }
+
+pre.log, pre.viewer { margin: 0; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px;
+  font: 11.5px/1.65 var(--mono); color: var(--tx2); white-space: pre-wrap; word-break: break-all; transition: background .3s; }
+pre.log { max-height: 300px; }
+pre.viewer { max-height: 460px; }
+pre.log .ok { color: var(--ok); } pre.log .warn { color: var(--warn); } pre.log .err { color: var(--err); } pre.log .dim { color: var(--tx3); }
+pre.log .line { animation: rowIn .2s backwards }
+
+/* Markdown 正文（日记） */
+.md-body { font: 13.5px/1.85 system-ui, 'Segoe UI', 'Microsoft YaHei', sans-serif; color: var(--tx); }
+.md-body h3, .md-body h4 { margin: 14px 0 6px; font-weight: 700; }
+.md-body h3 { font-size: 16px; } .md-body h4 { font-size: 14px; color: var(--tx2); }
+.md-body p { margin: 6px 0; }
+.md-body ul { margin: 6px 0; padding-left: 22px; }
+.md-body li { margin: 3px 0; }
+.md-body blockquote { margin: 8px 0; padding: 5px 13px; border-left: 3px solid var(--acc); background: var(--bg2); border-radius: 0 8px 8px 0; color: var(--tx2); }
+.md-body hr { border: 0; border-top: 1px dashed var(--line2); margin: 14px 0; }
+.md-body code { font: 11.5px var(--mono); background: var(--bg2); border-radius: 5px; padding: 1px 6px; }
+
+/* 日记页 */
+.seg { display: inline-flex; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg span { padding: 5px 18px; border-radius: 8px; font-size: 13px; color: var(--tx2); cursor: pointer; transition: all .2s cubic-bezier(.2,.7,.3,1); user-select: none; }
+.seg span:hover { color: var(--tx) }
+.seg span.on { background: var(--acc); color: #fff; font-weight: 600; box-shadow: 0 2px 8px color-mix(in srgb, var(--acc) 30%, transparent); }
+.diary-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 20px 14px; margin-bottom: 13px; box-shadow: var(--shadow);
+  transition: transform .16s, box-shadow .16s, border-color .16s, background .3s; animation: cardIn .4s backwards; }
+.diary-card:hover { transform: translateY(-1px); border-color: var(--line-hover); box-shadow: var(--shadow-hover); }
+.diary-card.flash { animation: flashHL 1.4s }
+@keyframes flashHL { 0%, 55% { border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 22%, transparent) } }
+.diary-date { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; border-bottom: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); padding-bottom: 8px; }
+.diary-date .d { font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+.diary-date .w { font-size: 12px; color: var(--tx3); }
+.cal { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin-bottom: 13px; box-shadow: var(--shadow); animation: cardIn .3s backwards; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-head .m { font-weight: 700; font-size: 15px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-dow { text-align: center; font-size: 11px; color: var(--tx3); padding: 4px 0; }
+.cal-day { position: relative; text-align: center; padding: 10px 0; border-radius: 9px; font-size: 13px; color: var(--tx); cursor: default; transition: background .15s, transform .15s, color .15s; }
+.cal-day.dim { color: var(--tx3); }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--acc); }
+.cal-day.has { cursor: pointer; background: var(--acc-soft); color: var(--acc); font-weight: 600; }
+.cal-day.has:hover { transform: scale(1.1); }
+.cal-day .pin { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.feed-more { text-align: center; padding: 16px; color: var(--tx3); font-size: 12.5px; cursor: pointer; transition: color .15s }
+.feed-more:hover { color: var(--acc) }
+#to-top { position: fixed; right: 24px; bottom: 24px; z-index: 40; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line2);
+  background: var(--card); color: var(--tx2); font-size: 16px; cursor: pointer; box-shadow: var(--shadow-hover); padding: 0;
+  opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity .25s, transform .25s; }
+#to-top.on { opacity: 1; transform: none; pointer-events: auto; }
+#to-top:hover { color: var(--acc); border-color: var(--acc); }
+
+/* 情感页 */
+.six-row { display: flex; align-items: center; gap: 12px; margin: 9px 0; }
+.six-label { flex: 0 0 52px; font-size: 13px; color: var(--tx2); }
+.six-track { flex: 1; height: 10px; border-radius: 99px; background: var(--bg2); overflow: hidden; }
+.six-fill { height: 100%; border-radius: 99px; width: 0; transition: width .9s cubic-bezier(.2,.7,.3,1); }
+.six-val { flex: 0 0 34px; text-align: right; font-family: var(--mono); font-size: 12.5px; color: var(--tx2); }
+.af-events { font-size: 12.5px; color: var(--tx2); padding: 5px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); }
+.af-events:last-child { border-bottom: 0 }
+
+/* 事件卡（任务流） */
+.evt { background: var(--card2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; margin: 8px 0; animation: rowIn .22s backwards; }
+.evt-head { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-bottom: 3px; }
+.evt-kv { font-size: 12.5px; margin: 2px 0; display: flex; gap: 8px; }
+.evt-kv .k { color: var(--tx3); flex: 0 0 52px; }
+
+/* 自我文档 */
+.doc-missing { color: var(--tx3); padding: 14px 0; text-align: center; font-size: 13px; }
+
+/* 词库页 */
+.lex-search { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.lex-search input { flex: 1; min-width: 220px; }
+.lex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 11px; }
+.lex-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; box-shadow: var(--shadow);
+  cursor: pointer; transition: border-color .16s, transform .16s, box-shadow .16s; animation: cardIn .35s backwards; }
+.lex-card:hover { border-color: var(--acc); transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.lex-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.lex-term { font-size: 15px; font-weight: 700; color: var(--tx); }
+.lex-meaning { font-size: 13px; margin: 5px 0 7px; color: var(--tx); }
+.lex-row { font-size: 12px; color: var(--tx2); margin: 3px 0; display: flex; gap: 8px; }
+.lex-row .k { color: var(--tx3); flex: 0 0 44px; }
+.lex-ex { background: var(--bg); border-left: 2px solid var(--acc); border-radius: 0 6px 6px 0; padding: 4px 9px; font-size: 12px; color: var(--tx2); margin: 4px 0; }
+.lex-meta { font-size: 10.5px; color: var(--tx3); margin-top: 7px; border-top: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); padding-top: 6px; }
+
+/* 概览 tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 11px; margin-bottom: 13px; }
+.tile { position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; box-shadow: var(--shadow);
+  transition: transform .16s, box-shadow .16s, background .3s; animation: cardIn .4s backwards; }
+.tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.tile:nth-child(2) { animation-delay: .04s } .tile:nth-child(3) { animation-delay: .08s }
+.tile:nth-child(4) { animation-delay: .12s } .tile:nth-child(5) { animation-delay: .16s }
+.tile::after { content: ''; position: absolute; left: 15px; right: auto; bottom: 0; height: 2px; width: 26px; border-radius: 2px;
+  background: var(--acc); opacity: .55; transition: width .3s cubic-bezier(.2,.7,.3,1) }
+.tile:hover::after { width: calc(100% - 30px) }
+.tile .t-label { font-size: 11px; color: var(--tx3); margin-bottom: 5px; letter-spacing: .4px; }
+.tile .t-value { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+.tile .t-sub { font-size: 11px; color: var(--tx3); margin-top: 2px; }
+.tile .t-value.ok { color: var(--ok); } .tile .t-value.err { color: var(--err); }
+
+/* 骨架屏 */
+.skeleton { position: relative; overflow: hidden; background: var(--bg2); border-radius: 6px; color: transparent !important; user-select: none; }
+.skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tx) 7%, transparent), transparent);
+  animation: shimmer 1.3s infinite; }
+@keyframes shimmer { to { transform: translateX(100%) } }
+
+.gate-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); align-items: center; animation: fadeSlide .25s; }
+.gate-row:last-child { border-bottom: 0; }
+
+#save-fab { position: fixed; right: 24px; bottom: 24px; z-index: 50; display: flex; align-items: center; gap: 9px;
+  padding: 11px 19px; border-radius: 99px; border: none;
+  background: linear-gradient(135deg, var(--acc), color-mix(in srgb, var(--acc) 55%, var(--purple)));
+  color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--acc) 40%, transparent);
+  opacity: 0; transform: translateY(16px) scale(.92); pointer-events: none;
+  transition: opacity .25s, transform .25s cubic-bezier(.2,.9,.3,1.3); }
+#save-fab.on { opacity: 1; transform: none; pointer-events: auto; }
+#save-fab:hover { filter: brightness(1.06); }
+#save-fab .cnt { background: rgba(255,255,255,.25); border-radius: 99px; padding: 0 8px; font-size: 12px; }
+#toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 18px); z-index: 60;
+  background: var(--card); color: var(--tx); border: 1px solid var(--line2);
+  border-radius: 9px; padding: 9px 17px; font-size: 13px; box-shadow: var(--shadow-hover);
+  opacity: 0; pointer-events: none; transition: opacity .28s, transform .28s; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.ok { border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+#toast.err { border-color: color-mix(in srgb, var(--err) 45%, transparent); }
+
+.muted { color: var(--tx2); } .mono { font-family: var(--mono); font-size: 11.5px; }
+a { color: var(--acc); text-decoration: none; } a:hover { text-decoration: underline; }
+@media (max-width: 760px) { .shell { flex-direction: column } aside.side { position: static; width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; } nav.side-nav { flex-direction: row; flex-wrap: wrap; } .side-foot { border-top: 0 } .nav-group { display: none } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <div class="name"><span class="dot" id="live-dot"></span> channel-qq 控制台</div>
+      <div class="sub">OneBot v11 · QQ 频道</div>
+    </div>
+    <nav class="side-nav" id="nav">
+      <div class="nav-group">总览</div>
+      <span class="nav-item" data-nav="overview"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>概览</span>
+      <div class="nav-group">运行状态</div>
+      <span class="nav-item" data-nav="conn"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0"/><path d="M3.5 9.5a10 10 0 0 1 17 0"/><circle cx="12" cy="17" r="2.5"/><path d="M12 14.5V12"/></svg>连接</span>
+      <span class="nav-item" data-nav="windows"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H5l-2 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/></svg>会话窗口</span>
+      <span class="nav-item" data-nav="gate"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>陌生人门控<span class="badge" id="nav-gate-badge"></span></span>
+      <div class="nav-group">她的世界</div>
+      <span class="nav-item" data-nav="diary"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16l-8-4-8 4z"/></svg>日记</span>
+      <span class="nav-item" data-nav="affection"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.5 4 6.5 4c2.4 0 4.2 1.3 5.5 3.2C13.3 5.3 15.1 4 17.5 4c4 0 6 4 4.5 7.7C19.5 16.4 12 21 12 21z"/></svg>情感</span>
+      <span class="nav-item" data-nav="self"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>自我</span>
+      <span class="nav-item" data-nav="interactions"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6M18 8.5v3a3 3 0 0 1-3 3"/></svg>任务流</span>
+      <span class="nav-item" data-nav="knowledge"><svg viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M4 17a2 2 0 0 1 2-2h13"/><path d="M9 7h7"/></svg>知识库</span>
+            <div class="nav-group">系统</div>
+      <span class="nav-item" data-nav="config"><svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.4"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.4"/></svg>配置</span>
+      <span class="nav-item" data-nav="log"><svg viewBox="0 0 24 24"><path d="M4 4h13a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>运行日志</span>
+    </nav>
+    <div class="side-foot">
+      <span class="footlink" id="theme-btn" title="主题：自动/浅色/深色">主题: 自动</span>
+      <a class="footlink" href="/memes-panel" target="_blank">表情包</a>
+      <a class="footlink" href="/" target="_blank">DSH</a>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="top">
+      <h1 id="view-title">概览</h1>
+      <span class="chip" id="t-conn">检查中…</span>
+      <span class="chip" id="t-client">—</span>
+      <span class="chip mono" id="t-self">selfId —</span>
+      <span class="chip" id="t-uptime">—</span>
+    </header>
+
+    <!-- 概览 -->
+    <section data-view="overview">
+      <div class="tiles">
+        <div class="tile"><div class="t-label">QQ 连接</div><div class="t-value skeleton" id="ov-conn">—</div><div class="t-sub" id="ov-client">—</div></div>
+        <div class="tile"><div class="t-label">机器人</div><div class="t-value skeleton" id="ov-self">—</div><div class="t-sub">selfId</div></div>
+        <div class="tile"><div class="t-label">会话窗口</div><div class="t-value skeleton" id="ov-win">—</div><div class="t-sub" id="ov-win-sub">群聊 + 私聊</div></div>
+        <div class="tile"><div class="t-label">陌生人待审</div><div class="t-value skeleton" id="ov-gate">—</div><div class="t-sub">私聊门控</div></div>
+        <div class="tile"><div class="t-label">运行时长</div><div class="t-value skeleton" id="ov-up">—</div><div class="t-sub" id="ov-ver">—</div></div>
+      </div>
+      <div class="card"><h2>最近窗口 <span class="op"><a href="#" data-goto="windows">全部 →</a></span></h2>
+        <table><tbody id="ov-win-body"><tr><td class="muted">暂无</td></tr></tbody></table></div>
+      <div class="card"><h2>最新动态 <span class="op"><a href="#" data-goto="log">日志 →</a></span></h2>
+        <pre class="log" id="ov-log" style="max-height:170px">…</pre></div>
+    </section>
+
+    <!-- 连接 -->
+    <section data-view="conn">
+      <div class="card">
+        <h2>连接 <span class="op"><button class="mini ghost" id="btn-reconn">重连</button><button class="mini ghost" id="btn-caps">能力矩阵</button></span></h2>
+        <div class="kv">
+          <span class="k">状态</span><span class="v" id="c-state">—</span>
+          <span class="k">模式</span><span class="v" id="c-mode">—</span>
+          <span class="k">地址</span><span class="v mono" id="c-url">—</span>
+          <span class="k">客户端</span><span class="v" id="c-desc">—</span>
+          <span class="k">运行</span><span class="v" id="c-uptime">—</span>
+          <span class="k">插件</span><span class="v mono" id="c-ver">—</span>
+        </div>
+        <div class="caps-wrap" id="caps-wrap"><div class="caps" id="caps"></div></div>
+        <div id="conn-err" style="color:var(--err);font-size:12px;margin-top:6px"></div>
+      </div>
+    </section>
+
+    <!-- 会话窗口 -->
+    <section data-view="windows">
+      <div class="card">
+        <h2>会话窗口 <span class="op"><span class="chip" id="w-count">0</span></span></h2>
+        <table><thead><tr><th>类型</th><th>窗口</th><th>sessionId</th><th>状态</th><th>队列</th><th>最近消息</th></tr></thead>
+        <tbody id="win-body"><tr><td colspan="6" class="muted">暂无窗口——收到第一条消息后出现</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <!-- 陌生人门控 -->
+    <section data-view="gate">
+      <div class="card">
+        <h2>陌生人私聊门控 <span class="op"><span class="chip" id="g-count">—</span></span></h2>
+        <div id="gate-pending"></div>
+        <details style="margin-top:8px"><summary class="muted" style="cursor:pointer;font-size:12px">已放行 / 已拒绝（<span id="g-rest-count">0</span>）</summary>
+          <div id="gate-rest" style="margin-top:8px"></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- 配置 -->
+    <section data-view="config">
+      <div class="pills" id="cfg-pills">
+        <span class="pill" data-tab="trigger">触发与节奏</span>
+        <span class="pill" data-tab="route">身份与路由</span>
+        <span class="pill" data-tab="access">群组与连接</span>
+        <span class="pill" data-tab="fun">表情与交互</span>
+      </div>
+      <div class="card" data-cfg="trigger"><h2>触发与节奏 <span class="op"><span class="dirty-chip" data-dirty="trigger">有修改</span></span></h2><div class="form"></div></div>
+      <div class="card" data-cfg="route"><h2>身份与路由 <span class="op"><span class="dirty-chip" data-dirty="route">有修改</span></span></h2><div class="form"></div></div>
+      <div class="card" data-cfg="access"><h2>群组与连接 <span class="op"><span class="dirty-chip" data-dirty="access">有修改</span></span></h2><div class="form"></div></div>
+      <div class="card" data-cfg="fun"><h2>表情与交互 <span class="op"><span class="dirty-chip" data-dirty="fun">有修改</span></span></h2><div class="form"></div></div>
+    </section>
+
+    <!-- 日记 -->
+    <section data-view="diary">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px">
+        <div class="seg" id="diary-seg"><span data-mode="feed" class="on">清单</span><span data-mode="cal">日历</span></div>
+        <span class="chip" id="diary-count">—</span>
+      </div>
+      <div class="cal" id="diary-cal" style="display:none">
+        <div class="cal-head"><button class="mini ghost" id="cal-prev">‹</button><span class="m" id="cal-month"></span><button class="mini ghost" id="cal-next">›</button></div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div id="diary-feed"></div>
+      <div class="feed-more" id="feed-more" style="display:none">下滑加载更多 ↓</div>
+      <button id="to-top" title="回到顶部">↑</button>
+    </section>
+
+    <!-- 情感 -->
+    <section data-view="affection">
+      <div class="tiles">
+        <div class="tile"><div class="t-label">好感度</div><div class="t-value skeleton" id="af-score">—</div><div class="t-sub" id="af-stage">—</div></div>
+        <div class="tile"><div class="t-label">亲密</div><div class="t-value" id="af-int">—</div><div class="t-sub">intimacy</div></div>
+        <div class="tile"><div class="t-label">信任</div><div class="t-value" id="af-tru">—</div><div class="t-sub">trust</div></div>
+        <div class="tile"><div class="t-label">心动</div><div class="t-value" id="af-pas">—</div><div class="t-sub">passion</div></div>
+      </div>
+      <div class="card"><h2>六维情感 <span class="op"><span class="chip mono" id="six-updated">—</span></span></h2><div id="six-bars"></div></div>
+      <div class="card"><h2>情绪状态</h2><div id="emotion-body" class="muted" style="padding:4px 0">她还没上报过情绪（qq_report_emotion）</div></div>
+      <div class="card"><h2>好感度事件 <span class="op"><span class="chip" id="af-evcount">0</span></span></h2><div id="af-events" class="muted">暂无事件</div></div>
+    </section>
+
+    <!-- 自我 -->
+    <section data-view="self">
+      <div class="pills" id="self-tabs"></div>
+      <div class="card"><h2 id="self-doc-title">—</h2><div id="self-doc-body"></div></div>
+    </section>
+
+    <!-- 任务流 -->
+    <section data-view="interactions">
+      <div class="card"><h2>任务流 <span class="op"><span class="chip" id="it-count">0</span></span></h2>
+        <div id="it-list"></div></div>
+    </section>
+
+    <!-- 知识库 -->
+    <section data-view="knowledge">
+      <div class="card" style="padding:11px 16px;margin-bottom:13px">
+        <div class="lex-search">
+          <input type="text" id="kn-q" placeholder="搜索内容 / 标签…（实时过滤）" autocomplete="off">
+          <div class="pills" style="margin:0" id="kn-type">
+            <span class="pill on" data-t="">全部</span>
+            <span class="pill" data-t="preference">preference</span>
+            <span class="pill" data-t="knowledge">knowledge</span>
+          </div>
+        </div>
+      </div>
+      <div class="lex-grid" id="kn-grid"></div>
+      <div class="muted" id="kn-empty" style="padding:18px;text-align:center;display:none">知识库还是空的——纠正她（「避免/改用/优先…」）或让她提炼知识后会出现在这里</div>
+    </section>
+
+    <!-- 日志 -->
+    <section data-view="log">
+      <div class="card">
+        <h2>运行日志 <span class="op">
+          <label class="chip" style="cursor:pointer;display:flex;align-items:center;gap:5px"><input type="checkbox" id="log-auto" checked style="width:auto;accent-color:var(--acc)"> 自动</label>
+          <select id="log-lines" style="background:var(--card);color:var(--tx);border:1px solid var(--line2);border-radius:7px;padding:3px 6px;font-size:12px">
+            <option>80</option><option selected>150</option><option>300</option><option>500</option>
+          </select>
+          <button class="mini ghost" id="btn-log-refresh">刷新</button>
+        </span></h2>
+        <pre class="log" id="log">…</pre>
+      </div>
+    </section>
+  </div>
+</div>
+
+<button id="save-fab">保存修改 <span class="cnt" id="save-cnt">0</span></button>
+<div id="toast"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ================= 主题 =================
+const Theme = {
+  mode: localStorage.getItem('qqpanel-theme') || 'auto',
+  apply() {
+    document.documentElement.dataset.theme = this.mode;
+    document.getElementById('theme-btn').textContent = '主题: ' + ({ auto: '自动', light: '浅色', dark: '深色' })[this.mode];
+  },
+  cycle() { this.mode = { auto: 'light', light: 'dark', dark: 'auto' }[this.mode] || 'auto'; localStorage.setItem('qqpanel-theme', this.mode); this.apply(); },
+};
+document.getElementById('theme-btn').onclick = () => Theme.cycle();
+Theme.apply();
+
+// ================= 视图导航 =================
+const Nav = {
+  titles: { overview: '概览', conn: '连接', windows: '会话窗口', gate: '陌生人门控', config: '配置', diary: '日记', affection: '情感', self: '自我', interactions: '任务流', knowledge: '知识库', log: '运行日志' },
+  show(id) {
+    if (!this.titles[id]) id = 'overview';
+    document.querySelectorAll('section[data-view]').forEach((s) => s.classList.toggle('on', s.dataset.view === id));
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('on', n.dataset.nav === id));
+    document.getElementById('view-title').textContent = this.titles[id];
+    localStorage.setItem('qqpanel-view', id);
+    if (id === 'log') CardLog.refresh();
+    if (id === 'diary') Diary.ensure();
+    if (id === 'affection') AffectionView.ensure();
+    if (id === 'self') SelfDocs.ensure();
+    if (id === 'interactions') Interactions.ensure();
+    if (id === 'knowledge') Knowledge.ensure();
+  },
+};
+document.querySelectorAll('.nav-item').forEach((n) => { n.onclick = () => Nav.show(n.dataset.nav); });
+document.querySelectorAll('[data-goto]').forEach((a) => { a.onclick = (e) => { e.preventDefault(); Nav.show(a.dataset.goto); }; });
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const App = {
+  async api(path, body) {
+    const r = await fetch(path, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    return r.json();
+  },
+  fmtAgo(ts) { if (!ts) return '—'; const diff = Math.floor(Date.now() / 1000 - (ts > 2e10 ? ts / 1000 : ts)); if (diff < 60) return diff + ' 秒前'; if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'; if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'; return Math.floor(diff / 86400) + ' 天前'; },
+  fmtDur(sec) { if (sec == null) return '—'; const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return (h ? h + ' 小时 ' : '') + m + ' 分钟'; },
+  fmtSize(n) { if (n == null) return ''; if (n < 1024) return n + ' B'; if (n < 1048576) return (n / 1024).toFixed(1) + ' KB'; return (n / 1048576).toFixed(2) + ' MB'; },
+  shortSession(sid) { return String(sid ?? '').replace(/^qq-/, '').slice(0, 34); },
+  // 数字滚动动效：从旧值平滑到新值
+  countUp(el, target, suffix = '') {
+    const from = parseInt(el.dataset.num || '0', 10) || 0;
+    if (from === target) { el.textContent = target + suffix; return; }
+    el.dataset.num = target;
+    const t0 = performance.now(), dur = 420;
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(from + (target - from) * eased) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },
+};
+let toastTimer = null;
+function toast(msg, ok) {
+  const t = $('toast'); t.textContent = msg; t.className = 'show ' + (ok === false ? 'err' : 'ok');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ''; }, 2600);
+}
+
+// ================= 配置字段表 =================
+const CFG_GROUPS = [
+  { id: 'trigger', fields: [
+    { k: 'talkValue', label: '群聊回复概率 talkValue', type: 'number', step: 0.05, min: 0, max: 1, hint: '0~1，无 @ 时的插话门槛' },
+    { k: 'requireMention', label: '必须 @ 才回应', type: 'boolean', hint: '关=关键词/概率也会接话' },
+    { k: 'groupEnabled', label: '群聊总开关', type: 'boolean' },
+    { k: 'rateLimitMs', label: '发送限速 rateLimitMs', type: 'number', step: 50, hint: '毫秒' },
+    { k: 'maxMessageLength', label: '单条长度上限', type: 'number', step: 100 },
+    { k: 'segmentation.enabled', label: '智能分段', type: 'boolean', hint: '按句切分更像人' },
+    { k: 'segmentation.maxSegments', label: '分段数上限', type: 'number', step: 1 },
+    { k: 'batching.windowMs', label: '攒批窗口 windowMs', type: 'number', step: 500, hint: '毫秒，攒多条一起处理' },
+    { k: 'batching.maxMessages', label: '攒批条数上限', type: 'number', step: 1 },
+  ]},
+  { id: 'route', fields: [
+    { k: 'persona.selfName', label: 'bot 自称', type: 'string' },
+    { k: 'persona.masterName', label: '对主人的称呼', type: 'string' },
+    { k: 'persona.peerName', label: '对群友的称呼', type: 'string' },
+    { k: 'persona.pronoun', label: '自称代词', type: 'string' },
+    { k: 'agentPreset', label: 'agent 预设', type: 'string', hint: '新窗口生效，存量会话不变' },
+    { k: 'workspacePath', label: '工作区路径', type: 'string', hint: '新窗口生效' },
+    { k: 'groupModel.provider', label: '群聊独立模型 provider', type: 'nullable', hint: '留空=跟随默认路由' },
+    { k: 'groupModel.model', label: '群聊独立模型 model', type: 'nullable', hint: '留空=跟随默认路由' },
+  ]},
+  { id: 'access', fields: [
+    { k: 'connection.url', label: 'OneBot WS 地址', type: 'string', hint: '保存后自动重连' },
+    { k: 'connection.accessToken', label: 'AccessToken', type: 'secret', hint: '留空 = 不修改' },
+    { k: 'selfId', label: 'bot QQ 号 selfId', type: 'number', step: 1 },
+    { k: 'primaryGroup', label: '主群', type: 'nullable', hint: '留空=未设置' },
+    { k: 'extraGroups', label: '附加群（逗号分隔）', type: 'array' },
+    { k: 'admins', label: '管理员（逗号分隔）', type: 'array' },
+    { k: 'dmGate.allowList', label: '门控放行名单（逗号分隔）', type: 'array' },
+    { k: 'dmGate.enabled', label: '陌生人门控', type: 'boolean', hint: '陌生人待审 + 主人通知' },
+    { k: 'dmGate.notifyAdmin', label: '待审通知主人', type: 'boolean' },
+    { k: 'dmGate.pendingReply', label: '给陌生人的统一回复', type: 'string' },
+  ]},
+  { id: 'fun', fields: [
+    { k: 'emoji.steal', label: '偷图入库', type: 'boolean', hint: '主群图片自动收进表情库' },
+    { k: 'emoji.autoSend', label: '回帖自动带图', type: 'boolean' },
+    { k: 'emoji.autoSendProbability', label: '带图概率', type: 'number', step: 0.05, min: 0, max: 1 },
+    { k: 'poke.enabled', label: '戳一戳裁决', type: 'boolean', hint: '被戳时交给她自己决定怎么回' },
+    { k: 'poke.pokeBack', label: '允许戳回去', type: 'boolean' },
+    { k: 'imageRecognition.enabled', label: '图片识别', type: 'boolean', hint: '入站图片附件化（多模态）' },
+  ]},
+];
+
+const CardCfg = {
+  snapshot: {}, meta: {},
+  render() {
+    for (const g of CFG_GROUPS) {
+      const box = document.querySelector(`[data-cfg="${g.id}"] .form`);
+      box.innerHTML = '';
+      for (const f of g.fields) {
+        this.meta[f.k] = f;
+        const field = document.createElement('div');
+        field.className = 'field';
+        if (f.type === 'boolean') {
+          const row = document.createElement('div'); row.className = 'switchrow';
+          const meta = document.createElement('div'); meta.className = 'meta';
+          const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = f.label;
+          meta.appendChild(lbl);
+          if (f.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; meta.appendChild(h); }
+          const sw = document.createElement('label'); sw.className = 'switch';
+          const el = document.createElement('input'); el.type = 'checkbox'; el.id = 'f-' + f.k;
+          const track = document.createElement('span'); track.className = 'track';
+          const thumb = document.createElement('span'); thumb.className = 'thumb';
+          track.appendChild(thumb); sw.appendChild(el); sw.appendChild(track);
+          row.appendChild(meta); row.appendChild(sw);
+          field.appendChild(row);
+          el.addEventListener('change', () => this.markDirty());
+          box.appendChild(field);
+          continue;
+        }
+        const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = f.label;
+        field.appendChild(lbl);
+        const el = document.createElement('input');
+        el.id = 'f-' + f.k; el.autocomplete = 'off';
+        if (f.type === 'number') { el.type = 'number'; el.step = f.step ?? 1; if (f.min !== undefined) el.min = f.min; if (f.max !== undefined) el.max = f.max; }
+        else if (f.type === 'secret') { el.type = 'password'; el.placeholder = '已配置——留空不修改'; }
+        else if (f.type === 'nullable') { el.type = 'text'; el.placeholder = '留空 = 不设置'; }
+        else el.type = 'text';
+        field.appendChild(el);
+        if (f.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; field.appendChild(h); }
+        box.appendChild(field);
+        el.addEventListener('input', () => this.markDirty());
+      }
+    }
+  },
+  load() {
+    App.api('/channel-qq-api').then((j) => {
+      const s = j.settings || {};
+      for (const g of CFG_GROUPS) for (const f of g.fields) {
+        const el = $('f-' + CSS.escape(f.k));
+        if (!el) continue;
+        let v = s[f.k];
+        if (f.k.endsWith('accessToken')) v = '';
+        if (el.type === 'checkbox') el.checked = v === true;
+        else if (f.type === 'array') el.value = Array.isArray(v) ? v.join(', ') : (v ?? '');
+        else el.value = v ?? '';
+        this.snapshot[f.k] = this.serialize(f.k);
+      }
+      this.markDirty();
+    }).catch(() => {});
+  },
+  valueOf(k) {
+    const el = $('f-' + CSS.escape(k));
+    if (!el) return undefined;
+    if (el.type === 'checkbox') return el.checked;
+    if (this.meta[k].type === 'array') return el.value.split(/[,，]+/).map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
+    if (el.type === 'number') return el.value === '' ? '' : Number(el.value);
+    return el.value;
+  },
+  serialize(k) {
+    const el = $('f-' + CSS.escape(k));
+    if (!el) return '';
+    if (el.type === 'checkbox') return el.checked ? '1' : '0';
+    if (this.meta[k].type === 'array') return this.valueOf(k).join(',');
+    return el.value;
+  },
+  markDirty() {
+    let total = 0;
+    for (const g of CFG_GROUPS) {
+      let dirty = 0;
+      for (const f of g.fields) {
+        const el = $('f-' + CSS.escape(f.k));
+        if (!el) continue;
+        const isDirty = this.serialize(f.k) !== String(this.snapshot[f.k] ?? '');
+        el.classList.toggle('dirty', isDirty && el.type !== 'checkbox');
+        if (isDirty) dirty++;
+      }
+      total += dirty;
+      const chip = document.querySelector(`[data-dirty="${g.id}"]`);
+      if (chip) chip.classList.toggle('on', dirty > 0);
+    }
+    $('save-cnt').textContent = total;
+    $('save-fab').classList.toggle('on', total > 0);
+  },
+  async save() {
+    const patch = {};
+    for (const g of CFG_GROUPS) for (const f of g.fields) {
+      const el = $('f-' + CSS.escape(f.k));
+      if (!el) continue;
+      if (this.serialize(f.k) === String(this.snapshot[f.k] ?? '')) continue;
+      if (f.type === 'secret' && el.value.trim() === '') continue;
+      if (f.type === 'nullable' && el.value.trim() === '') { patch[f.k] = ''; continue; }
+      patch[f.k] = this.valueOf(f.k);
+      if (f.type === 'array') patch[f.k] = el.value;
+    }
+    if (!Object.keys(patch).length) return;
+    try {
+      const r = await App.api('/channel-qq-api', patch);
+      if (r.ok) {
+        toast('已保存 ' + r.applied.length + ' 项，热生效 ✓');
+        if (r.applied.some((k) => k.startsWith('connection.'))) toast('连接参数已更新，正在重连…');
+        this.load();
+      } else toast('保存失败: ' + (r.error || '?'), false);
+    } catch (e) { toast('保存失败: ' + e.message, false); }
+  },
+};
+$('save-fab').onclick = () => CardCfg.save();
+
+const CfgTabs = {
+  show(tab) {
+    document.querySelectorAll('#cfg-pills .pill').forEach((p) => p.classList.toggle('on', p.dataset.tab === tab));
+    document.querySelectorAll('section[data-view="config"] [data-cfg]').forEach((c) => { c.style.display = c.dataset.cfg === tab ? 'block' : 'none'; });
+    localStorage.setItem('qqpanel-cfgtab', tab);
+  },
+};
+document.querySelectorAll('#cfg-pills .pill').forEach((p) => { p.onclick = () => CfgTabs.show(p.dataset.tab); });
+
+// ---- 卡片：连接 ----
+const CardConn = {
+  capsShown: false,
+  tick(st) {
+    const c = st.connection || {};
+    const ok = c.connected === true;
+    $('live-dot').className = 'dot ' + (ok ? 'ok' : 'bad');
+    const t = $('t-conn'); t.textContent = ok ? '已连接' : (c.mode ? '未连接' : '检查中…'); t.className = 'chip ' + (ok ? 'ok' : 'warn');
+    $('t-client').textContent = c.client ? (c.client.appName || c.client.kind) : '未知客户端';
+    $('t-self').textContent = 'selfId ' + (c.selfId ?? '—');
+    $('t-uptime').textContent = '运行 ' + App.fmtDur(c.uptimeSec);
+    $('c-state').innerHTML = ok ? '<span style="color:var(--ok)">在线</span>' : '<span style="color:var(--err)">离线</span>';
+    $('c-mode').textContent = c.mode === 'forward' ? 'forward（主动连协议端）' : c.mode === 'reverse' ? 'reverse（等协议端回连）' : (c.mode || '—');
+    $('c-url').textContent = c.url || '—';
+    $('c-desc').textContent = c.describe || '—';
+    $('c-uptime').textContent = App.fmtDur(c.uptimeSec);
+    $('c-ver').textContent = c.version || '—';
+    // 概览 tiles（骨架屏 → 实值；数字滚动）
+    for (const id of ['ov-conn', 'ov-self', 'ov-win', 'ov-gate', 'ov-up']) $(id).classList.remove('skeleton');
+    const ov = $('ov-conn'); ov.textContent = ok ? '在线' : '离线'; ov.className = 't-value ' + (ok ? 'ok' : 'err');
+    $('ov-client').textContent = c.client ? (c.client.appName || c.client.kind) + (c.client.version ? ' · ' + c.client.version.slice(0, 18) : '') : '—';
+    $('ov-self').textContent = c.selfId ?? '—';
+    $('ov-up').textContent = App.fmtDur(c.uptimeSec);
+    $('ov-ver').textContent = '插件 ' + (c.version || '—');
+  },
+  async caps() {
+    try {
+      const t = await App.api('/channel-qq-api/test');
+      const caps = t.capabilities || {};
+      $('caps').innerHTML = Object.entries(caps).sort().map(([action, cap]) => {
+        const cls = cap === true ? 'y' : cap === false ? 'n' : 'u';
+        const mark = cap === true ? 'OK' : cap === false ? 'NO' : '?';
+        return `<span title="${cap === true ? '支持' : cap === false ? '不支持' : '未验证'}"><b class="${cls}">${mark}</b> ${esc(action)}</span>`;
+      }).join('') || '<span class="muted">未探测到客户端能力</span>';
+      const w = $('caps-wrap');
+      w.style.display = 'block'; w.classList.remove('show'); void w.offsetWidth; w.classList.add('show');
+      this.capsShown = true; $('btn-caps').textContent = '收起矩阵';
+    } catch (e) { $('conn-err').textContent = '能力矩阵获取失败: ' + e.message; }
+  },
+};
+$('btn-caps').onclick = () => { if (CardConn.capsShown) { $('caps-wrap').style.display = 'none'; CardConn.capsShown = false; $('btn-caps').textContent = '能力矩阵'; } else CardConn.caps(); };
+$('btn-reconn').onclick = async () => { $('btn-reconn').disabled = true; try { await App.api('/channel-qq-api/reconnect', {}); toast('重连指令已发出'); } finally { $('btn-reconn').disabled = false; setTimeout(poll, 1200); } };
+
+// ---- 卡片：门控 ----
+const CardGate = {
+  tick(st) {
+    const entries = st.gate || [];
+    const pending = entries.filter((e) => e.status === 'pending');
+    const rest = entries.filter((e) => e.status !== 'pending');
+    $('g-count').textContent = pending.length + ' 待审';
+    $('g-count').className = 'chip ' + (pending.length ? 'warn' : 'ok');
+    const badge = $('nav-gate-badge');
+    badge.textContent = pending.length; badge.classList.toggle('on', pending.length > 0);
+    App.countUp($('ov-gate'), pending.length);
+    $('ov-gate').className = 't-value ' + (pending.length ? 'err' : 'ok');
+    $('gate-pending').innerHTML = pending.length ? pending.map((e) => `
+      <div class="gate-row"><span class="who"><b class="mono">${e.userId}</b> <span class="muted">${esc((e.note || '').replace(/ ?notified:/g, '').slice(0, 30))}</span> <span class="muted">· ${App.fmtAgo(e.at)}</span></span>
+      <span><button class="mini ok" data-act="approve" data-uid="${e.userId}">放行</button> <button class="mini err" data-act="deny" data-uid="${e.userId}">拒绝</button></span></div>`).join('')
+      : '<div class="muted" style="padding:6px 0">没有待审的陌生人</div>';
+    $('g-rest-count').textContent = rest.length;
+    $('gate-rest').innerHTML = rest.map((e) => `
+      <div class="gate-row"><span class="mono">${e.userId} <span class="muted">· ${e.status === 'approved' ? '已放行' : '已拒绝'} · ${App.fmtAgo(e.at)}</span></span>
+      <span><button class="mini ghost" data-act="${e.status === 'approved' ? 'deny' : 'approve'}" data-uid="${e.userId}">${e.status === 'approved' ? '改为拒绝' : '改为放行'}</button></span></div>`).join('');
+  },
+};
+document.addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('button[data-act]'); if (!btn) return;
+  btn.disabled = true;
+  try { await App.api('/channel-qq-api/dm-gate', { action: btn.dataset.act, userId: Number(btn.dataset.uid) }); toast(btn.dataset.act === 'approve' ? '已放行 ' + btn.dataset.uid : '已拒绝 ' + btn.dataset.uid); } finally { setTimeout(poll, 300); }
+});
+
+// ---- 卡片：会话窗口 ----
+const CardWin = {
+  tick(st) {
+    const list = st.windows || [];
+    $('w-count').textContent = list.length;
+    App.countUp($('ov-win'), list.length);
+    const row = (w) => {
+      const state = w.pending ? '<span class="chip warn">回复中</span>' : w.live ? '<span class="chip ok">存活</span>' : '<span class="chip">挂起</span>';
+      return `<tr><td>${w.isGroup ? '群聊' : '私聊'}</td><td class="mono">${w.isGroup ? w.chatId : 'DM ' + w.chatId}</td><td class="mono muted">${esc(App.shortSession(w.sessionId))}</td><td>${state}</td><td>${w.queued || 0}</td><td class="muted">${App.fmtAgo(w.lastEventTime)}</td></tr>`;
+    };
+    $('win-body').innerHTML = list.length ? list.map(row).join('') : '<tr><td colspan="6" class="muted">暂无窗口——收到第一条消息后出现</td></tr>';
+    $('ov-win-body').innerHTML = list.length ? list.slice(0, 4).map((w) => `<tr><td>${w.isGroup ? '群聊' : '私聊'} <b class="mono">${w.isGroup ? w.chatId : 'DM ' + w.chatId}</b></td><td>${w.pending ? '<span class="chip warn">回复中</span>' : w.live ? '<span class="chip ok">存活</span>' : '<span class="chip">挂起</span>'}</td><td class="muted">${App.fmtAgo(w.lastEventTime)}</td></tr>`).join('') : '<tr><td class="muted">暂无</td></tr>';
+    $('ov-win-sub').textContent = list.filter((w) => w.isGroup).length + ' 群聊 · ' + list.filter((w) => !w.isGroup).length + ' 私聊';
+  },
+};
+
+// ---- 卡片：日志 ----
+const CardLog = {
+  lastAt: 0,
+  render(lines) {
+    const cls = (line) => line.includes('ERROR') || line.includes('failed') ? 'err' : line.includes('WARN') || line.includes('warn') ? 'warn' : line.includes('OK') || line.includes('ready') ? 'ok' : '';
+    return (lines || []).map((l) => {
+      const i = l.indexOf(' ');
+      const ts = i > 0 ? `<span class="dim">${esc(l.slice(0, i))}</span> ` : '';
+      const body = esc(i > 0 ? l.slice(i + 1) : l);
+      const c = cls(l);
+      return `<span class="line">${ts + (c ? `<span class="${c}">${body}</span>` : body)}</span>`;
+    }).join('\n') || '<span class="dim">日志为空</span>';
+  },
+  async refresh() {
+    const lines = Number($('log-lines').value) || 150;
+    try {
+      const r = await App.api('/channel-qq-api/log?lines=' + lines);
+      const ll = r.lines || [];
+      $('log').innerHTML = this.render(ll);
+      $('log').scrollTop = $('log').scrollHeight;
+      $('ov-log').innerHTML = this.render(ll.slice(-8));
+    } catch (e) { $('log').textContent = '日志读取失败: ' + e.message; }
+  },
+};
+$('btn-log-refresh').onclick = () => CardLog.refresh();
+
+// ---- Markdown 渲染（日记正文）----
+const Viewer = {
+  md(text) {
+    const inline = (t) => esc(t)
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    const out = [];
+    let listOpen = false;
+    const closeList = () => { if (listOpen) { out.push('</ul>'); listOpen = false; } };
+    for (const line of text.split('\n')) {
+      if (/^###\s/.test(line)) { closeList(); out.push('<h4>' + inline(line.slice(4)) + '</h4>'); }
+      else if (/^##\s/.test(line)) { closeList(); out.push('<h4>' + inline(line.slice(3)) + '</h4>'); }
+      else if (/^#\s/.test(line)) { closeList(); out.push('<h3>' + inline(line.slice(2)) + '</h3>'); }
+      else if (/^---+\s*$/.test(line)) { closeList(); out.push('<hr>'); }
+      else if (/^>\s?/.test(line)) { closeList(); out.push('<blockquote>' + inline(line.replace(/^>\s?/, '')) + '</blockquote>'); }
+      else if (/^[-*]\s/.test(line)) { if (!listOpen) { out.push('<ul>'); listOpen = true; } out.push('<li>' + inline(line.slice(2)) + '</li>'); }
+      else if (/^\d+\.\s/.test(line)) { if (!listOpen) { out.push('<ul>'); listOpen = true; } out.push('<li>' + inline(line.replace(/^\d+\.\s/, '')) + '</li>'); }
+      else if (line.trim() === '') { closeList(); }
+      else { closeList(); out.push('<p>' + inline(line) + '</p>'); }
+    }
+    closeList();
+    return '<div class="md-body">' + out.join('') + '</div>';
+  },
+};
+
+// ---- 文件与记忆 ----
+const Diary = {
+  entries: [], mode: 'feed', shown: 0, loaded: false,
+  y: new Date().getFullYear(), m: new Date().getMonth(),
+  async ensure() { if (!this.loaded) await this.load(); },
+  async load() {
+    try {
+      const r = await App.api('/channel-qq-api/diary');
+      this.entries = r.entries || [];
+      const demo = this.entries.some((e) => e.demo);
+      $('diary-count').textContent = this.entries.length + ' 篇' + (demo ? ' · 演示数据' : '');
+      this.loaded = true;
+      this.renderFeed(true);
+      this.renderCal();
+    } catch (e) { $('diary-feed').innerHTML = '<div class="muted" style="padding:14px">加载失败: ' + esc(e.message) + '</div>'; }
+  },
+  fmtDate(d) {
+    const parts = d.split('-').map(Number);
+    const w = '日一二三四五六'[new Date(parts[0], parts[1] - 1, parts[2]).getDay()];
+    return parts[1] + ' 月 ' + parts[2] + ' 日 · 周' + w;
+  },
+  card(e, i, anim) {
+    return '<article class="diary-card" id="diary-' + e.date + '"' + (anim ? ' style="animation-delay:' + Math.min(i * 0.05, 0.3) + 's"' : '') + '>' +
+      '<div class="diary-date"><span class="d">' + this.fmtDate(e.date) + '</span><span class="w mono">' + e.date + '</span>' + (e.demo ? '<span class="chip warn">演示数据</span>' : '') + '</div>' +
+      Viewer.md(e.text) + '</article>';
+  },
+  renderFeed(reset) {
+    const feed = $('diary-feed');
+    if (reset) { feed.innerHTML = ''; this.shown = 0; }
+    if (!this.entries.length) {
+      feed.innerHTML = '<div class="muted" style="padding:18px;text-align:center">还没有日记——她写下第一篇后会出现在这里</div>';
+      $('feed-more').style.display = 'none';
+      return;
+    }
+    const batch = this.entries.slice(this.shown, this.shown + 6);
+    feed.insertAdjacentHTML('beforeend', batch.map((e, i) => this.card(e, i, true)).join(''));
+    this.shown += batch.length;
+    $('feed-more').style.display = this.shown < this.entries.length ? 'block' : 'none';
+  },
+  renderCal() {
+    const y = this.y, m = this.m;
+    $('cal-month').textContent = y + ' 年 ' + (m + 1) + ' 月';
+    const withDates = new Set(this.entries.map((e) => e.date));
+    const today = new Date();
+    const startDow = (new Date(y, m, 1).getDay() + 6) % 7;
+    const days = new Date(y, m + 1, 0).getDate();
+    let html = ['一', '二', '三', '四', '五', '六', '日'].map((d) => '<span class="cal-dow">' + d + '</span>').join('');
+    for (let i = 0; i < startDow; i++) html += '<span class="cal-day dim"></span>';
+    for (let d = 1; d <= days; d++) {
+      const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const has = withDates.has(key);
+      const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
+      html += '<span class="cal-day' + (has ? ' has' : '') + (isToday ? ' today' : '') + '"' + (has ? ' data-date="' + key + '" title="打开这篇日记"' : '') + '>' + d + (has ? '<span class="pin"></span>' : '') + '</span>';
+    }
+    $('cal-grid').innerHTML = html;
+    $('cal-grid').querySelectorAll('.cal-day.has').forEach((el) => { el.onclick = () => this.jump(el.dataset.date); });
+  },
+  jump(date) {
+    this.setMode('feed');
+    const idx = this.entries.findIndex((e) => e.date === date);
+    if (idx === -1) return;
+    const feed = $('diary-feed');
+    this.shown = Math.min(idx + 1, this.entries.length);
+    feed.innerHTML = this.entries.slice(0, this.shown).map((e) => this.card(e, 0, false)).join('');
+    $('feed-more').style.display = this.shown < this.entries.length ? 'block' : 'none';
+    const el = $('diary-' + date);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); }
+  },
+  setMode(mode) {
+    this.mode = mode;
+    document.querySelectorAll('#diary-seg span').forEach((s) => s.classList.toggle('on', s.dataset.mode === mode));
+    $('diary-cal').style.display = mode === 'cal' ? 'block' : 'none';
+    $('diary-feed').style.display = mode === 'feed' ? 'block' : 'none';
+    $('feed-more').style.display = mode === 'feed' && this.shown < this.entries.length ? 'block' : 'none';
+    localStorage.setItem('qqpanel-diarymode', mode);
+  },
+};
+document.querySelectorAll('#diary-seg span').forEach((s) => { s.onclick = () => Diary.setMode(s.dataset.mode); });
+$('cal-prev').onclick = () => { Diary.m--; if (Diary.m < 0) { Diary.m = 11; Diary.y--; } Diary.renderCal(); };
+$('cal-next').onclick = () => { Diary.m++; if (Diary.m > 11) { Diary.m = 0; Diary.y++; } Diary.renderCal(); };
+$('feed-more').onclick = () => Diary.renderFeed(false);
+$('to-top').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+window.addEventListener('scroll', () => { $('to-top').classList.toggle('on', window.scrollY > 500); }, { passive: true });
+const feedSentinel = new IntersectionObserver((es) => { if (es[0].isIntersecting && Diary.mode === 'feed' && Diary.shown < Diary.entries.length) Diary.renderFeed(false); });
+
+// ---- 情感页 ----
+const AffectionView = {
+  sixMeta: [['intimacy', '亲密'], ['trust', '信任'], ['passion', '心动'], ['security', '安全'], ['rapport', '默契'], ['tension', '张力']],
+  async ensure() {
+    try {
+      const r = await App.api('/channel-qq-api/affection');
+      const af = r.affection || {};
+      const six = r.sixdim || {};
+      $('af-score').classList.remove('skeleton');
+      if (typeof af.score === 'number') App.countUp($('af-score'), af.score); else $('af-score').textContent = '—';
+      $('af-stage').textContent = af.stage || '—';
+      const rows = this.sixMeta.map(([k, label]) => {
+        const v = typeof six[k] === 'number' ? six[k] : 0;
+        const pct = Math.max(0, Math.min(100, v));
+        return '<div class="six-row"><span class="six-label">' + label + '</span>' +
+          '<div class="six-track"><div class="six-fill" data-w="' + pct + '" style="background:var(--acc)"></div></div>' +
+          '<span class="six-val">' + pct + '</span></div>';
+      }).join('');
+      $('six-bars').innerHTML = rows;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.querySelectorAll('#six-bars .six-fill').forEach((f) => { f.style.width = f.dataset.w + '%'; });
+      }));
+      $('six-updated').textContent = six.updated ? '更新 ' + App.fmtAgo(six.updated) : '—';
+      ['af-int', 'af-tru', 'af-pas'].forEach((id, i) => { $(id).textContent = six[['intimacy', 'trust', 'passion'][i]] ?? '—'; });
+      const emo = r.emotion;
+      $('emotion-body').innerHTML = emo && typeof emo === 'object' && Object.keys(emo).length
+        ? Viewer.md('```\n' + JSON.stringify(emo, null, 1) + '\n```').replace(/<\/?code>/g, '')
+        : '她还没上报过情绪（qq_report_emotion）';
+      const evs = Array.isArray(af.events) ? af.events : [];
+      $('af-evcount').textContent = evs.length;
+      $('af-events').innerHTML = evs.length ? evs.slice(-10).reverse().map((e) => {
+        const s = typeof e === 'string' ? e : JSON.stringify(e);
+        return '<div class="af-events">' + esc(String(s).slice(0, 160)) + '</div>';
+      }).join('') : '暂无事件';
+    } catch (e) { $('emotion-body').textContent = '加载失败: ' + e.message; }
+  },
+};
+
+// ---- 自我页 ----
+const SelfDocs = {
+  files: [], cur: null,
+  async ensure() {
+    try {
+      const r = await App.api('/channel-qq-api/self');
+      this.files = r.files || [];
+      if (!this.cur || !this.files.some((f) => f.name === this.cur)) {
+        this.cur = (this.files.find((f) => f.text !== null) || this.files[0] || {}).name || null;
+      }
+      $('self-tabs').innerHTML = this.files.map((f) =>
+        '<span class="pill' + (f.name === this.cur ? ' on' : '') + '" data-f="' + esc(f.name) + '">' + esc(f.name.replace(/\.md$/, '')) + (f.demo ? ' ·' : '') + '</span>').join('');
+      document.querySelectorAll('#self-tabs .pill').forEach((p) => { p.onclick = () => { this.cur = p.dataset.f; this.render(); }; });
+      this.render();
+    } catch (e) { $('self-doc-body').innerHTML = '<div class="doc-missing">加载失败: ' + esc(e.message) + '</div>'; }
+  },
+  render() {
+    const f = this.files.find((x) => x.name === this.cur);
+    // 高亮同步：每次切换文档都要更新 pill 状态（之前只在 ensure() 构建时设置一次）
+    document.querySelectorAll('#self-tabs .pill').forEach((p) => p.classList.toggle('on', p.dataset.f === this.cur));
+    const title = this.cur ? this.cur.replace(/\.md$/, '') : '—';
+    if (!f || f.text === null) {
+      $('self-doc-title').textContent = title;
+      $('self-doc-body').innerHTML = '<div class="doc-missing">她还没写这份文件——写好后会出现在这里' + (f && f.demo ? '（当前显示的是演示假数据）' : '') + '</div>';
+      return;
+    }
+    $('self-doc-title').innerHTML = esc(title) + (f.demo ? ' <span class="chip warn">演示数据</span>' : '');
+    $('self-doc-body').innerHTML = Viewer.md(f.text);
+  },
+};
+
+// ---- 任务流页 ----
+const Interactions = {
+  events: [], q: '',
+  async ensure() {
+    try {
+      const r = await App.api('/channel-qq-api/interactions');
+      this.events = r.events || [];
+      $('it-count').textContent = this.events.length + (this.events.some((e) => e.demo) ? ' · 演示' : '');
+      this.render();
+    } catch (e) { $('it-list').innerHTML = '<div class="muted">加载失败: ' + esc(e.message) + '</div>'; }
+  },
+  render() {
+    const list = this.events;
+    $('it-count').textContent = list.length;
+    $('it-list').innerHTML = list.length ? list.map((e, i) => {
+      const head = e.type || e.kind || '';
+      const kvs = [['from', e.from], ['to', e.to], ['what', e.what], ['result', e.result]]
+        .filter(([, v]) => v !== undefined && v !== '')
+        .map(([k, v]) => '<div class="evt-kv"><span class="k">' + k + '</span><span>' + esc(String(v)).slice(0, 200) + '</span></div>').join('');
+      const demo = e.demo ? '<span class="chip warn">演示</span>' : '';
+      return '<div class="evt" style="animation-delay:' + Math.min(i * 0.03, 0.4) + 's"><div class="evt-head">' +
+        (head ? '<span class="chip">' + esc(head) + '</span>' : '') + demo +
+        '<span class="muted mono">' + esc(e.at ? String(e.at).slice(0, 19).replace('T', ' ') : '') + '</span></div>' + kvs + '</div>';
+    }).join('') : '<div class="muted" style="padding:10px 0">还没有任务流记录——她接到/交付任务时会记在这里</div>';
+  },
+};
+
+// ---- 知识库页 ----
+const Knowledge = {
+  entries: [], q: '', type: '',
+  async ensure() {
+    try {
+      const r = await App.api('/channel-qq-api/knowledge');
+      this.entries = r.entries || [];
+      this.render();
+    } catch (e) { $('kn-grid').innerHTML = '<div class="muted">加载失败: ' + esc(e.message) + '</div>'; }
+  },
+  match(e) {
+    if (this.type && e.type !== this.type) return false;
+    if (!this.q) return true;
+    const hay = [e.content, (e.tags || []).join(' ')].join(' ').toLowerCase();
+    return hay.includes(this.q);
+  },
+  render() {
+    const list = this.entries.filter((e) => this.match(e));
+    $('kn-empty').style.display = list.length ? 'none' : 'block';
+    $('kn-grid').innerHTML = list.map((e, i) => {
+      const tags = (e.tags || []).map((t) => '<span class="chip">' + esc(t) + '</span>').join('');
+      return '<div class="lex-card" style="animation-delay:' + Math.min(i * 0.03, 0.4) + 's">' +
+        '<div class="lex-head"><span class="chip">' + esc(e.type || '?') + '</span>' +
+        '<span class="chip ' + (e.state === 'active' ? 'ok' : 'warn') + '">' + esc(e.state || '?') + '</span>' +
+        '<span class="chip mono">权重 ' + esc(String(e.weight ?? '—')) + '</span></div>' +
+        (e.content ? '<div class="lex-meaning">' + esc(e.content) + '</div>' : '') +
+        (tags ? '<div class="lex-row"><span class="k">标签</span><span class="chips">' + tags + '</span></div>' : '') +
+        '<div class="lex-meta">' + ['命中 ' + (e.hits || 0), e.confidence != null ? '置信 ' + e.confidence : '', e.created ? '建于 ' + new Date(e.created).toLocaleDateString('zh-CN') : ''].filter(Boolean).join(' · ') + '</div></div>';
+    }).join('');
+  },
+};
+document.getElementById('kn-q').addEventListener('input', (e) => { Knowledge.q = e.target.value.trim().toLowerCase(); Knowledge.render(); });
+document.querySelectorAll('#kn-type .pill').forEach((p) => { p.onclick = () => { Knowledge.type = p.dataset.t; document.querySelectorAll('#kn-type .pill').forEach((x) => x.classList.toggle('on', x === p)); Knowledge.render(); }; });
+feedSentinel.observe($('feed-more'));
+
+// ---- 中央轮询 ----
+const CARDS = [CardConn, CardGate, CardWin];
+async function poll() {
+  try {
+    const st = await App.api('/channel-qq-api/status');
+    for (const c of CARDS) c.tick(st);
+    $('conn-err').textContent = '';
+    if ($('log-auto').checked && (Date.now() - CardLog.lastAt > 8000)) { CardLog.lastAt = Date.now(); CardLog.refresh(); }
+  } catch (e) { $('conn-err').textContent = '状态获取失败: ' + e.message; }
+}
+poll();
+setInterval(poll, 4000);
+CardLog.refresh();
+CardCfg.render();
+CardCfg.load();
+CfgTabs.show(localStorage.getItem('qqpanel-cfgtab') || 'trigger');
+Nav.show(localStorage.getItem('qqpanel-view') || 'overview');
+</script>
+</body>
+</html>

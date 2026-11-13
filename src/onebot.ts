@@ -70,6 +70,16 @@ export class OneBotClient extends EventEmitter {
     return this.ws?.readyState === WebSocket.OPEN
   }
 
+  /** Web console manual reconnect: reset backoff and drop the socket; the close handler dials again immediately. */
+  forceReconnect(): void {
+    if (this.closed) return
+    this.reconnectAttempts = 0
+    try {
+      this.ws?.close(1000, 'manual reconnect')
+    } catch { /* socket already down */ }
+    if (!this.ws) this.scheduleReconnect()
+  }
+
   /** One OneBot API call; resolves with `data` on ok, rejects on failure or timeout. */
   async call(action: string, params: Record<string, unknown> = {}, timeoutMs = 30_000): Promise<unknown> {
     // 2026-11-07 空消息拦截（总闸）：send_*_msg 的 message 数组若没有任何可渲染内容
