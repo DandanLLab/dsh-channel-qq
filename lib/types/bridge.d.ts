@@ -38,6 +38,17 @@ export declare class ConversationBridge {
     private readonly out;
     private readonly log;
     private get persona();
+    /** Web console summary of every conversation window (one row per group / DM peer). */
+    snapshot(): Array<{
+        key: string;
+        isGroup: boolean;
+        chatId: number;
+        sessionId: string;
+        live: boolean;
+        pending: boolean;
+        queued: number;
+        lastEventTime: number | null;
+    }>;
     private readonly conversations;
     private readonly ensureInFlight;
     /** Poke patience counters per group. */

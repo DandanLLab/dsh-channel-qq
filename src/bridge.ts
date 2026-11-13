@@ -91,6 +91,29 @@ export class ConversationBridge {
     return this.config.persona
   }
 
+  /** Web console summary of every conversation window (one row per group / DM peer). */
+  snapshot(): Array<{
+    key: string
+    isGroup: boolean
+    chatId: number
+    sessionId: string
+    live: boolean
+    pending: boolean
+    queued: number
+    lastEventTime: number | null
+  }> {
+    return [...this.conversations.values()].map((c) => ({
+      key: c.key,
+      isGroup: c.isGroup,
+      chatId: c.chatId,
+      sessionId: c.sessionId,
+      live: c.handle !== null,
+      pending: c.pending,
+      queued: c.queue.length,
+      lastEventTime: typeof c.lastEvent?.time === 'number' ? c.lastEvent.time : null,
+    }))
+  }
+
   private readonly conversations = new Map<string, Conversation>()
   private readonly ensureInFlight = new Map<string, Promise<Conversation>>()
   /** Poke patience counters per group. */
