@@ -148,7 +148,16 @@ input.dirty, select.dirty { border-color: var(--warn); }
 .pill .dirty-dot.on { display: inline-block; }
 
 .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 9px 14px; }
-.field { background: var(--card2); border: 1px solid transparent; border-radius: 9px; padding: 9px 12px; transition: border-color .18s, background .3s; }
+.field { background: var(--card2); border: 1px solid transparent; border-radius: 9px; padding: 9px 12px; transition: border-color .18s, background .3s, transform .18s; }
+.field:hover { border-color: var(--line); transform: translateY(-1px); }
+.field.wide { grid-column: 1 / -1; }
+.card[data-cfg] { animation: cardIn .32s cubic-bezier(.2,.7,.3,1) backwards; }
+.card[data-cfg] .form .field { animation: rowIn .26s cubic-bezier(.2,.7,.3,1) backwards; }
+.card[data-cfg] .form .field:nth-child(2) { animation-delay: .03s; }
+.card[data-cfg] .form .field:nth-child(3) { animation-delay: .06s; }
+.card[data-cfg] .form .field:nth-child(4) { animation-delay: .09s; }
+.card[data-cfg] .form .field:nth-child(5) { animation-delay: .12s; }
+.card[data-cfg] .form .field:nth-child(n+6) { animation-delay: .15s; }
 .field:hover { border-color: var(--line); }
 .field .lbl { font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
 .field .hint { font-size: 11px; color: var(--tx3); margin-top: 4px; }
@@ -519,6 +528,8 @@ const Nav = {
     document.querySelectorAll('section[data-view]').forEach((s) => s.classList.toggle('on', s.dataset.view === id));
     document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('on', n.dataset.nav === id));
     document.getElementById('view-title').textContent = this.titles[id];
+    // 保存按钮只在配置界面出现（它的作用域仅限配置表单）
+    document.getElementById('save-fab').style.display = id === 'config' ? 'flex' : 'none';
     localStorage.setItem('qqpanel-view', id);
     if (id === 'log') CardLog.refresh();
     if (id === 'diary') Diary.ensure();
@@ -577,18 +588,19 @@ const CFG_GROUPS = [
     { k: 'batching.maxMessages', label: '攒批条数上限', type: 'number', step: 1 },
   ]},
   { id: 'route', fields: [
-    { k: 'defaultModel', label: '默认模型', type: 'model', hint: 'DM 与群聊跟随的默认路由；下拉为 DSH 已注册模型，选「自定义」可手填 provider/model' },
+    { k: 'defaultModel', label: '默认模型', type: 'model', hint: 'DM 与群聊跟随的默认路由；下拉为 DSH 已注册模型，选「自定义」可填 provider / model / 推理力度，保存即热切换' },
     { k: 'persona.selfName', label: 'bot 自称', type: 'string' },
     { k: 'persona.masterName', label: '对主人的称呼', type: 'string' },
     { k: 'persona.peerName', label: '对群友的称呼', type: 'string' },
     { k: 'persona.pronoun', label: '自称代词', type: 'string' },
     { k: 'agentPreset', label: 'agent 预设', type: 'string', hint: '新窗口生效，存量会话不变' },
-    { k: 'workspacePath', label: '工作区路径', type: 'string', hint: '新窗口生效' },
+    { k: 'workspacePath', label: '工作区路径', type: 'string', wide: true, hint: '新窗口生效' },
     { k: 'groupModel.provider', label: '群聊独立模型 provider', type: 'nullable', hint: '留空=跟随默认路由' },
     { k: 'groupModel.model', label: '群聊独立模型 model', type: 'nullable', hint: '留空=跟随默认路由' },
   ]},
   { id: 'access', fields: [
-    { k: 'connection.url', label: 'OneBot WS 地址', type: 'string', hint: '保存后自动重连' },
+    { k: 'connection.mode', label: '连接协议', type: 'select', options: [['forward', '正向 WS · 本机主动连接 OneBot'], ['reverse', '反向 WS · 本机开端口等 NapCat 接入']], hint: '改协议保存后自动重连；反向模式监听 WS 地址里的端口' },
+    { k: 'connection.url', label: 'OneBot WS 地址', type: 'string', wide: true, hint: '保存后自动重连' },
     { k: 'connection.accessToken', label: 'AccessToken', type: 'secret', hint: '留空 = 不修改' },
     { k: 'selfId', label: 'bot QQ 号 selfId', type: 'number', step: 1 },
     { k: 'primaryGroup', label: '主群', type: 'nullable', hint: '留空=未设置' },
@@ -598,7 +610,7 @@ const CFG_GROUPS = [
     { k: 'dmGate.enabled', label: '陌生人门控', type: 'boolean', hint: '陌生人待审 + 主人通知' },
     { k: 'dmGate.notifyAdmin', label: '待审通知主人', type: 'boolean' },
     { k: 'dmGate.groupAlert', label: '陌生群预警', type: 'boolean', hint: '白名单外的群来消息时私聊通知主人；群多时可关' },
-    { k: 'dmGate.pendingReply', label: '给陌生人的统一回复', type: 'string' },
+    { k: 'dmGate.pendingReply', label: '给陌生人的统一回复', type: 'string', wide: true },
   ]},
   { id: 'fun', fields: [
     { k: 'emoji.steal', label: '偷图入库', type: 'boolean', hint: '主群图片自动收进表情库' },
@@ -621,6 +633,7 @@ const CardCfg = {
         const field = document.createElement('div');
         field.className = 'field';
         if (f.type === 'model') {
+          field.classList.add('wide');
           const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = f.label;
           field.appendChild(lbl);
           const sel = document.createElement('select'); sel.id = 'f-' + f.k;
@@ -629,15 +642,41 @@ const CardCfg = {
           sel.addEventListener('change', () => { this.syncModelCustom(); this.markDirty(); clearTimeout(this._autoTimer); this._autoTimer = setTimeout(() => this.save(), 300); });
           field.appendChild(sel);
           const cust = document.createElement('div');
-          cust.id = 'f-defaultModel-custom'; cust.style.cssText = 'display:none;gap:8px;margin-top:8px;';
-          const ip = document.createElement('input'); ip.type = 'text'; ip.id = 'f-defaultModel-p';
-          ip.placeholder = 'provider（如 wb）'; ip.autocomplete = 'off';
-          const im = document.createElement('input'); im.type = 'text'; im.id = 'f-defaultModel-m';
-          im.placeholder = 'model id（如 glm-5.3-flash）'; im.autocomplete = 'off';
-          ip.addEventListener('input', () => this.markDirty());
-          im.addEventListener('input', () => this.markDirty());
-          cust.appendChild(ip); cust.appendChild(im);
+          cust.id = 'f-defaultModel-custom';
+          cust.style.cssText = 'display:none;flex-direction:column;gap:9px;margin-top:9px;padding:11px 12px;border:1px dashed var(--line2);border-radius:9px;';
+          const mkRow = (labelText, id) => {
+            const row = document.createElement('div');
+            const l = document.createElement('div'); l.style.cssText = 'font-size:11.5px;color:var(--tx3);margin-bottom:4px;'; l.textContent = labelText;
+            const inp = document.createElement('input'); inp.type = 'text'; inp.id = id; inp.autocomplete = 'off';
+            inp.addEventListener('input', () => this.markDirty());
+            row.appendChild(l); row.appendChild(inp);
+            return row;
+          };
+          const effRow = document.createElement('div');
+          const effLbl = document.createElement('div'); effLbl.style.cssText = 'font-size:11.5px;color:var(--tx3);margin-bottom:4px;'; effLbl.textContent = '推理力度 reasoningEffort';
+          const es = document.createElement('select'); es.id = 'f-defaultModel-e';
+          for (const [v, t] of [['', '跟随默认'], ['off', 'off（关闭推理）'], ['low', 'low'], ['medium', 'medium'], ['high', 'high']]) {
+            const o = document.createElement('option'); o.value = v; o.textContent = t; es.appendChild(o);
+          }
+          es.addEventListener('change', () => this.markDirty());
+          effRow.appendChild(effLbl); effRow.appendChild(es);
+          cust.appendChild(mkRow('provider（如 wb）', 'f-defaultModel-p'));
+          cust.appendChild(mkRow('model id（如 glm-5.3-flash）', 'f-defaultModel-m'));
+          cust.appendChild(effRow);
           field.appendChild(cust);
+          if (f.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; field.appendChild(h); }
+          box.appendChild(field);
+          continue;
+        }
+        if (f.type === 'select') {
+          const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = f.label;
+          field.appendChild(lbl);
+          const sel = document.createElement('select'); sel.id = 'f-' + f.k;
+          for (const [v, t] of f.options) {
+            const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
+          }
+          sel.addEventListener('change', () => this.markDirty());
+          field.appendChild(sel);
           if (f.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; field.appendChild(h); }
           box.appendChild(field);
           continue;
@@ -661,6 +700,7 @@ const CardCfg = {
         }
         const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = f.label;
         field.appendChild(lbl);
+        if (f.wide) field.classList.add('wide');
         const el = document.createElement('input');
         el.id = 'f-' + f.k; el.autocomplete = 'off';
         if (f.type === 'number') { el.type = 'number'; el.step = f.step ?? 1; if (f.min !== undefined) el.min = f.min; if (f.max !== undefined) el.max = f.max; }
@@ -723,6 +763,8 @@ const CardCfg = {
       const oc = document.createElement('option'); oc.value = '__custom__'; oc.textContent = '自定义…';
       sel.appendChild(oc);
       if (!curKey) sel.value = '__custom__';
+      const es = $('f-defaultModel-e');
+      if (es) es.value = cur?.reasoningEffort || '';
       this.syncModelCustom();
       this.snapshot['defaultModel'] = this.serialize('defaultModel');
       this.markDirty();
@@ -739,7 +781,8 @@ const CardCfg = {
     if (sel.value === '__custom__') {
       const p = ($('f-defaultModel-p')?.value || '').trim();
       const m = ($('f-defaultModel-m')?.value || '').trim();
-      return p && m ? p + '|' + m : '';
+      const e = ($('f-defaultModel-e')?.value || '').trim();
+      return p && m ? p + '|' + m + '|' + e : '';
     }
     return sel.value;
   },
@@ -787,11 +830,13 @@ const CardCfg = {
       if (!el) continue;
       if (this.serialize(f.k) === String(this.snapshot[f.k] ?? '')) continue;
       if (f.type === 'model') {
+        if (this.serialize(f.k) === String(this.snapshot[f.k] ?? '')) continue;
         const t = this.modelText();
         if (t) {
-          const [p, m] = t.split('|');
+          const [p, m, e] = t.split('|');
           patch['defaultModel.provider'] = p;
           patch['defaultModel.model'] = m;
+          if (e) patch['defaultModel.reasoningEffort'] = e;
         }
         continue;
       }

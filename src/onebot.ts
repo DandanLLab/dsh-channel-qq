@@ -252,7 +252,15 @@ export class OneBotClient extends EventEmitter {
     this.log(`reconnecting in ${delay}ms`)
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
-      this.connectForward()
+      // 协议可热切换：reverse 时重挂反向服务器（startReverseServer 自带去重），
+      // forward 时先收掉旧的反向服务器再拨号
+      if (this.connection.mode === 'reverse') {
+        this.startReverseServer(urlPort(this.connection.url, 8082))
+      } else {
+        this.reverseServer?.close()
+        this.reverseServer = null
+        this.connectForward()
+      }
     }, delay)
   }
 

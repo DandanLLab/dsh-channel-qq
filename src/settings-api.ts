@@ -11,7 +11,7 @@
  * the meme component), no secrets returned.
  */
 
-import { promises as fs } from 'node:fs'
+import { promises as fs, readFileSync } from 'node:fs'
 import * as path from 'node:path'
 import { describeClient, capabilityMatrixOf } from './client-compat.js'
 import type { Context } from '@deepseek-ai/cordis'
@@ -36,6 +36,7 @@ const HOT_SCALARS: Record<string, 'number' | 'boolean' | 'string' | 'string?' | 
   // 连接（保存后自动触发一次重连）
   'connection.url': 'string',
   'connection.accessToken': 'string',
+  'connection.mode': 'string',
   'selfId': 'number',
   // 聊天触发
   'talkValue': 'number',
@@ -159,26 +160,29 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
     await fs.writeFile(overlayFile, JSON.stringify(overlay, null, 1))
   }
 
-  /** 默认路由（defaultModel.provider/model）写入 DSH profile 的 agentDefaultModel —— 不进 settings.json。
+  /** 默认路由（defaultModel.provider/model[/reasoningEffort]）写入 DSH profile 的 agentDefaultModel —— 不进 settings.json。
    *  saveSelection 走 configEditor 落盘到 profile，重启后仍生效；存量会话由 bridge 的
    *  syncResumedModel 在下次恢复时跟随新默认。 */
   async function applyDefaultModelPatch(patch: Record<string, unknown>, applied: string[]): Promise<void> {
     const provider = typeof patch['defaultModel.provider'] === 'string' ? patch['defaultModel.provider'].trim() : ''
     const model = typeof patch['defaultModel.model'] === 'string' ? patch['defaultModel.model'].trim() : ''
     if (provider === '' || model === '') return
+    // 推理力度：空 = 跟随 adapter 默认
+    const rawEffort = typeof patch['defaultModel.reasoningEffort'] === 'string' ? patch['defaultModel.reasoningEffort'].trim() : ''
+    const effort = ['off', 'low', 'medium', 'high'].includes(rawEffort) ? rawEffort : undefined
     const adm = (ctx as unknown as {
       agentDefaultModel?: {
-        saveSelection?(next: { provider: string; model: string }): Promise<void>
-        currentSelection?(): { provider: string; model: string }
+        saveSelection?(next: { provider: string; model: string; reasoningEffort?: string }): Promise<void>
+        currentSelection?(): { provider: string; model: string; reasoningEffort?: string }
       }
     }).agentDefaultModel
     if (adm?.saveSelection === undefined) {
       log('settings-api: agentDefaultModel.saveSelection unavailable — default model not changed')
       return
     }
-    await adm.saveSelection({ provider, model })
+    await adm.saveSelection({ provider, model, ...(effort === undefined ? {} : { reasoningEffort: effort }) })
     const now = adm.currentSelection?.()
-    log(`settings-api: default model → ${now?.provider ?? provider}/${now?.model ?? model}`)
+    log(`settings-api: default model → ${now?.provider ?? provider}/${now?.model ?? model}${now?.reasoningEffort ? ` (effort ${now.reasoningEffort})` : ''}`)
     applied.push('defaultModel.provider', 'defaultModel.model')
     // 立即热切换：所有活会话重指向新默认路由（下一 turn 生效）
     try { getBridge?.()?.hotReselectModel() } catch { /* bridge 未就绪时跳过，恢复时仍会同步 */ }
@@ -208,10 +212,12 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
     }
   }
 
-  /** Boot-time: re-apply the persisted overlay over the resolved config. */
-  async function applyOverlay(): Promise<void> {
+  /** Boot-time: re-apply the persisted overlay over the resolved config.
+   *  必须同步完成：connection.mode/url 等字段决定客户端启动形态，异步应用会与
+   *  client.start() 竞态（overlay 里 mode=reverse 时开机仍走 forward、反向服务器不监听）。 */
+  function applyOverlaySync(): void {
     try {
-      const raw = JSON.parse(await fs.readFile(overlayFile, 'utf8')) as Record<string, unknown>
+      const raw = JSON.parse(readFileSync(overlayFile, 'utf8')) as Record<string, unknown>
       let applied = 0
       for (const [k, v] of Object.entries(raw)) {
         if (!(k in HOT_SCALARS)) continue
@@ -221,7 +227,7 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
       if (applied > 0) log(`settings-api: overlay applied (${applied} fields from settings.json)`)
     } catch { /* no overlay yet */ }
   }
-  void applyOverlay()
+  applyOverlaySync()
 
   let webServer: { register(route: { kind: string; path: string; handler: (req: any, res: any) => void }): () => void } | undefined
   try {
