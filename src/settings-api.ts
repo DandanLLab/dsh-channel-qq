@@ -127,7 +127,7 @@ function setPath(obj: unknown, dotPath: string, value: unknown): void {
   cur[segs[segs.length - 1]] = value
 }
 
-export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHome: string, log: (line: string) => void, client?: { clientIdentity: import('./client-compat.js').ClientIdentity | null; connection: { mode: string; url: string }; isConnected?: () => boolean; forceReconnect?: () => void }): () => void {
+export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHome: string, log: (line: string) => void, client?: { clientIdentity: import('./client-compat.js').ClientIdentity | null; connection: { mode: string; url: string }; isConnected?: () => boolean; forceReconnect?: () => void }, getBridge?: () => { hotReselectModel(): void } | null): () => void {
   const overlayFile = path.join(dshHome, 'channel-qq', 'settings.json')
 
   /** Apply a patch object to the live config (whitelisted fields only). Returns applied keys. */
@@ -146,12 +146,59 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
     return applied
   }
 
-  /** Persist the overlay (re-applied over defaults on every boot). */
+  /** Persist the overlay (re-applied over defaults on every boot).
+   *  必须与现有文件合并：否则每次保存都会把之前保存过的字段从持久层抹掉（重启即丢）。 */
   async function persistOverlay(applied: string[]): Promise<void> {
-    const overlay: Record<string, unknown> = {}
-    for (const k of applied) overlay[k] = getPath(config, k)
+    let overlay: Record<string, unknown> = {}
+    try { overlay = JSON.parse(await fs.readFile(overlayFile, 'utf8')) as Record<string, unknown> } catch { /* 还没有 overlay */ }
+    for (const k of applied) {
+      const v = getPath(config, k)
+      if (v !== undefined) overlay[k] = v
+    }
     await fs.mkdir(path.dirname(overlayFile), { recursive: true })
     await fs.writeFile(overlayFile, JSON.stringify(overlay, null, 1))
+  }
+
+  /** 默认路由（defaultModel.provider/model）写入 DSH profile 的 agentDefaultModel —— 不进 settings.json。
+   *  saveSelection 走 configEditor 落盘到 profile，重启后仍生效；存量会话由 bridge 的
+   *  syncResumedModel 在下次恢复时跟随新默认。 */
+  async function applyDefaultModelPatch(patch: Record<string, unknown>, applied: string[]): Promise<void> {
+    const provider = typeof patch['defaultModel.provider'] === 'string' ? patch['defaultModel.provider'].trim() : ''
+    const model = typeof patch['defaultModel.model'] === 'string' ? patch['defaultModel.model'].trim() : ''
+    if (provider === '' || model === '') return
+    const adm = (ctx as unknown as {
+      agentDefaultModel?: {
+        saveSelection?(next: { provider: string; model: string }): Promise<void>
+        currentSelection?(): { provider: string; model: string }
+      }
+    }).agentDefaultModel
+    if (adm?.saveSelection === undefined) {
+      log('settings-api: agentDefaultModel.saveSelection unavailable — default model not changed')
+      return
+    }
+    await adm.saveSelection({ provider, model })
+    const now = adm.currentSelection?.()
+    log(`settings-api: default model → ${now?.provider ?? provider}/${now?.model ?? model}`)
+    applied.push('defaultModel.provider', 'defaultModel.model')
+    // 立即热切换：所有活会话重指向新默认路由（下一 turn 生效）
+    try { getBridge?.()?.hotReselectModel() } catch { /* bridge 未就绪时跳过，恢复时仍会同步 */ }
+  }
+
+  /** Apply one incoming patch: channel hot fields → config+overlay, 默认路由 → DSH profile. */
+  async function processPatch(patch: Record<string, unknown>): Promise<string[]> {
+    const applied = applyPatch(patch)
+    // persona 热同步：setEmotionPersona 只在启动时调用过一次，改了称呼必须立即跟随
+    if (applied.some((k) => k.startsWith('persona.'))) {
+      try {
+        const { setEmotionPersona } = await import('./emotion.js')
+        setEmotionPersona(config.persona.masterName, config.persona.pronoun)
+      } catch { /* emotion 模块未挂载时跳过 */ }
+    }
+    await applyDefaultModelPatch(patch, applied)
+    await persistOverlay(applied)
+    reconnectIfConnectionChanged(applied)
+    log(`settings-api: saved ${applied.length} fields`)
+    return applied
   }
 
   /** Connection-level edits need a redial to take effect. */
@@ -207,10 +254,7 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
         req.on('end', async () => {
           try {
             const patch = JSON.parse(bodyRaw) as Record<string, unknown>
-            const applied = applyPatch(patch)
-            await persistOverlay(applied)
-            reconnectIfConnectionChanged(applied)
-            log(`settings-api: saved ${applied.length} fields`)
+            const applied = await processPatch(patch)
             json(res, 200, { ok: true, applied })
           } catch (e) {
             json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) })
@@ -248,10 +292,7 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
         req.on('end', async () => {
           try {
             const patch = JSON.parse(bodyRaw) as Record<string, unknown>
-            const applied = applyPatch(patch)
-            await persistOverlay(applied)
-            reconnectIfConnectionChanged(applied)
-            log(`settings-api: saved ${applied.length} fields`)
+            const applied = await processPatch(patch)
             json(res, 200, { ok: true, applied })
           } catch (e) {
             json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) })
@@ -263,6 +304,36 @@ export function registerSettingsApi(ctx: Context, config: QQChannelConfig, dshHo
     },
   })
 
+  /** 模型目录 + 当前默认路由：面板下拉用（DSH 已注册 provider 及其广告模型）。 */
+  const offModels = webServer.register({
+    kind: 'exact',
+    path: '/channel-qq-api/models',
+    handler: (req: any, res: any) => {
+      if (denyNonLoopback(req, res)) return
+      if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method' })
+      void (async () => {
+        const rec = ctx as unknown as {
+          llm?: {
+            listConfigurableProviders?(): Array<{ provider: string; displayName: string }>
+            listModels?(provider: string): Promise<Array<{ id: string; name: string }>>
+          }
+          agentDefaultModel?: { currentSelection?(): { provider: string; model: string } }
+        }
+        const defaultModel = rec.agentDefaultModel?.currentSelection?.() ?? null
+        const llm = rec.llm
+        const catalog: Array<{ provider: string; displayName: string; models: Array<{ id: string; name: string }> }> = []
+        for (const p of llm?.listConfigurableProviders?.() ?? []) {
+          let models: Array<{ id: string; name: string }> = []
+          try {
+            models = ((await llm?.listModels?.(p.provider)) ?? []).map((m) => ({ id: m.id, name: m.name }))
+          } catch { /* 未配置/休眠的 provider：保留空组让前端跳过 */ }
+          catalog.push({ provider: p.provider, displayName: p.displayName, models })
+        }
+        json(res, 200, { ok: true, models: catalog, defaultModel })
+      })()
+    },
+  })
+
   log('settings-api: /channel-qq-api registered (loopback only)')
-  return () => { offGetTest(); offGet() }
+  return () => { offGetTest(); offGet(); offModels() }
 }

@@ -129,8 +129,13 @@ input[type=text], input[type=number], input[type=password] {
   background: var(--bg); border: 1px solid var(--line2); color: var(--tx);
   border-radius: 8px; padding: 7px 10px; font-size: 13px; width: 100%;
   transition: border-color .15s, box-shadow .15s, background .3s, color .3s; }
-input:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent); }
-input.dirty { border-color: var(--warn); }
+select {
+  background: var(--bg); border: 1px solid var(--line2); color: var(--tx);
+  border-radius: 8px; padding: 7px 10px; font-size: 13px; width: 100%;
+  transition: border-color .15s, box-shadow .15s; }
+select option, select optgroup { background: var(--bg); color: var(--tx); }
+input:focus, select:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent); }
+input.dirty, select.dirty { border-color: var(--warn); }
 
 /* 配置分组 pills */
 .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -229,6 +234,19 @@ pre.log .line { animation: rowIn .2s backwards }
 #to-top.on { opacity: 1; transform: none; pointer-events: auto; }
 #to-top:hover { color: var(--acc); border-color: var(--acc); }
 
+/* 卡片网格（知识库） */
+.lex-search { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.lex-search input { flex: 1; min-width: 220px; }
+.lex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 11px; }
+.lex-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; box-shadow: var(--shadow);
+  transition: border-color .16s, transform .16s, box-shadow .16s; animation: cardIn .35s backwards; }
+.lex-card:hover { border-color: var(--acc); transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.lex-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.lex-meaning { font-size: 13px; margin: 5px 0 7px; color: var(--tx); }
+.lex-row { font-size: 12px; color: var(--tx2); margin: 3px 0; display: flex; gap: 8px; }
+.lex-row .k { color: var(--tx3); flex: 0 0 44px; }
+.lex-meta { font-size: 10.5px; color: var(--tx3); margin-top: 7px; border-top: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); padding-top: 6px; }
+
 /* 情感页 */
 .six-row { display: flex; align-items: center; gap: 12px; margin: 9px 0; }
 .six-label { flex: 0 0 52px; font-size: 13px; color: var(--tx2); }
@@ -246,21 +264,6 @@ pre.log .line { animation: rowIn .2s backwards }
 
 /* 自我文档 */
 .doc-missing { color: var(--tx3); padding: 14px 0; text-align: center; font-size: 13px; }
-
-/* 词库页 */
-.lex-search { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-.lex-search input { flex: 1; min-width: 220px; }
-.lex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 11px; }
-.lex-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; box-shadow: var(--shadow);
-  cursor: pointer; transition: border-color .16s, transform .16s, box-shadow .16s; animation: cardIn .35s backwards; }
-.lex-card:hover { border-color: var(--acc); transform: translateY(-2px); box-shadow: var(--shadow-hover); }
-.lex-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-.lex-term { font-size: 15px; font-weight: 700; color: var(--tx); }
-.lex-meaning { font-size: 13px; margin: 5px 0 7px; color: var(--tx); }
-.lex-row { font-size: 12px; color: var(--tx2); margin: 3px 0; display: flex; gap: 8px; }
-.lex-row .k { color: var(--tx3); flex: 0 0 44px; }
-.lex-ex { background: var(--bg); border-left: 2px solid var(--acc); border-radius: 0 6px 6px 0; padding: 4px 9px; font-size: 12px; color: var(--tx2); margin: 4px 0; }
-.lex-meta { font-size: 10.5px; color: var(--tx3); margin-top: 7px; border-top: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); padding-top: 6px; }
 
 /* 概览 tiles */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 11px; margin-bottom: 13px; }
@@ -292,9 +295,9 @@ pre.log .line { animation: rowIn .2s backwards }
   background: linear-gradient(135deg, var(--acc), color-mix(in srgb, var(--acc) 55%, var(--purple)));
   color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer;
   box-shadow: 0 5px 18px color-mix(in srgb, var(--acc) 40%, transparent);
-  opacity: 0; transform: translateY(16px) scale(.92); pointer-events: none;
+  opacity: .55; transform: translateY(16px) scale(.92); pointer-events: auto;
   transition: opacity .25s, transform .25s cubic-bezier(.2,.9,.3,1.3); }
-#save-fab.on { opacity: 1; transform: none; pointer-events: auto; }
+#save-fab.on { opacity: 1; transform: none; }
 #save-fab:hover { filter: brightness(1.06); }
 #save-fab .cnt { background: rgba(255,255,255,.25); border-radius: 99px; padding: 0 8px; font-size: 12px; }
 #toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 18px); z-index: 60;
@@ -574,6 +577,7 @@ const CFG_GROUPS = [
     { k: 'batching.maxMessages', label: '攒批条数上限', type: 'number', step: 1 },
   ]},
   { id: 'route', fields: [
+    { k: 'defaultModel', label: '默认模型', type: 'model', hint: 'DM 与群聊跟随的默认路由；下拉为 DSH 已注册模型，选「自定义」可手填 provider/model' },
     { k: 'persona.selfName', label: 'bot 自称', type: 'string' },
     { k: 'persona.masterName', label: '对主人的称呼', type: 'string' },
     { k: 'persona.peerName', label: '对群友的称呼', type: 'string' },
@@ -616,6 +620,28 @@ const CardCfg = {
         this.meta[f.k] = f;
         const field = document.createElement('div');
         field.className = 'field';
+        if (f.type === 'model') {
+          const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = f.label;
+          field.appendChild(lbl);
+          const sel = document.createElement('select'); sel.id = 'f-' + f.k;
+          const loading = document.createElement('option'); loading.value = ''; loading.textContent = '加载中…';
+          sel.appendChild(loading);
+          sel.addEventListener('change', () => { this.syncModelCustom(); this.markDirty(); clearTimeout(this._autoTimer); this._autoTimer = setTimeout(() => this.save(), 300); });
+          field.appendChild(sel);
+          const cust = document.createElement('div');
+          cust.id = 'f-defaultModel-custom'; cust.style.cssText = 'display:none;gap:8px;margin-top:8px;';
+          const ip = document.createElement('input'); ip.type = 'text'; ip.id = 'f-defaultModel-p';
+          ip.placeholder = 'provider（如 wb）'; ip.autocomplete = 'off';
+          const im = document.createElement('input'); im.type = 'text'; im.id = 'f-defaultModel-m';
+          im.placeholder = 'model id（如 glm-5.3-flash）'; im.autocomplete = 'off';
+          ip.addEventListener('input', () => this.markDirty());
+          im.addEventListener('input', () => this.markDirty());
+          cust.appendChild(ip); cust.appendChild(im);
+          field.appendChild(cust);
+          if (f.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; field.appendChild(h); }
+          box.appendChild(field);
+          continue;
+        }
         if (f.type === 'boolean') {
           const row = document.createElement('div'); row.className = 'switchrow';
           const meta = document.createElement('div'); meta.className = 'meta';
@@ -654,6 +680,7 @@ const CardCfg = {
       for (const g of CFG_GROUPS) for (const f of g.fields) {
         const el = $('f-' + CSS.escape(f.k));
         if (!el) continue;
+        if (f.type === 'model') { this.snapshot[f.k] = ''; continue; }
         let v = s[f.k];
         if (f.k.endsWith('accessToken')) v = '';
         if (el.type === 'checkbox') el.checked = v === true;
@@ -663,6 +690,58 @@ const CardCfg = {
       }
       this.markDirty();
     }).catch(() => {});
+    this.loadModels();
+  },
+  // ---- 默认模型选择器 ----
+  loadModels() {
+    App.api('/channel-qq-api/models').then((j) => {
+      const sel = $('f-defaultModel');
+      if (!sel || !j.ok) return;
+      const cur = j.defaultModel || null;
+      const curKey = cur ? cur.provider + '|' + cur.model : '';
+      sel.innerHTML = '';
+      let found = false;
+      for (const grp of j.models || []) {
+        if (!grp.models || !grp.models.length) continue;
+        const og = document.createElement('optgroup'); og.label = (grp.displayName || grp.provider) + '（' + grp.provider + '）';
+        for (const m of grp.models) {
+          const key = grp.provider + '|' + m.id;
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = m.id + (m.name && m.name !== m.id ? ' · ' + m.name : '');
+          if (key === curKey) { opt.selected = true; found = true; }
+          og.appendChild(opt);
+        }
+        sel.appendChild(og);
+      }
+      if (curKey && !found) {
+        const opt = document.createElement('option');
+        opt.value = curKey; opt.textContent = cur.provider + '/' + cur.model + '（当前）';
+        sel.insertBefore(opt, sel.firstChild);
+        sel.value = curKey;
+      }
+      const oc = document.createElement('option'); oc.value = '__custom__'; oc.textContent = '自定义…';
+      sel.appendChild(oc);
+      if (!curKey) sel.value = '__custom__';
+      this.syncModelCustom();
+      this.snapshot['defaultModel'] = this.serialize('defaultModel');
+      this.markDirty();
+    }).catch(() => {});
+  },
+  syncModelCustom() {
+    const sel = $('f-defaultModel'); const cust = $('f-defaultModel-custom');
+    if (!sel || !cust) return;
+    cust.style.display = sel.value === '__custom__' ? 'flex' : 'none';
+  },
+  modelText() {
+    const sel = $('f-defaultModel');
+    if (!sel || !sel.value) return '';
+    if (sel.value === '__custom__') {
+      const p = ($('f-defaultModel-p')?.value || '').trim();
+      const m = ($('f-defaultModel-m')?.value || '').trim();
+      return p && m ? p + '|' + m : '';
+    }
+    return sel.value;
   },
   valueOf(k) {
     const el = $('f-' + CSS.escape(k));
@@ -675,6 +754,7 @@ const CardCfg = {
   serialize(k) {
     const el = $('f-' + CSS.escape(k));
     if (!el) return '';
+    if (k === 'defaultModel') return this.modelText();
     if (el.type === 'checkbox') return el.checked ? '1' : '0';
     if (this.meta[k].type === 'array') return this.valueOf(k).join(',');
     return el.value;
@@ -696,6 +776,9 @@ const CardCfg = {
     }
     $('save-cnt').textContent = total;
     $('save-fab').classList.toggle('on', total > 0);
+    // 自动保存：停止输入 1.6s 后把有改动的字段一次性提交（模型选择立即保存走 save()）
+    clearTimeout(this._autoTimer);
+    if (total > 0) this._autoTimer = setTimeout(() => this.save(), 1600);
   },
   async save() {
     const patch = {};
@@ -703,6 +786,15 @@ const CardCfg = {
       const el = $('f-' + CSS.escape(f.k));
       if (!el) continue;
       if (this.serialize(f.k) === String(this.snapshot[f.k] ?? '')) continue;
+      if (f.type === 'model') {
+        const t = this.modelText();
+        if (t) {
+          const [p, m] = t.split('|');
+          patch['defaultModel.provider'] = p;
+          patch['defaultModel.model'] = m;
+        }
+        continue;
+      }
       if (f.type === 'secret' && el.value.trim() === '') continue;
       if (f.type === 'nullable' && el.value.trim() === '') { patch[f.k] = ''; continue; }
       patch[f.k] = this.valueOf(f.k);

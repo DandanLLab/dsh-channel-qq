@@ -34,7 +34,7 @@ import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
 import type { QQChannelConfig } from './config.js'
 import { OutboundQueue } from './outbound.js'
 import { parseInbound, rawText } from './segments.js'
-import { asSessionId, type AgentPresetsService, type AgentsCreateOptions, type AgentsService, type ChannelAgentHandle, type PromptBlock, type WorkspaceEntry } from './services.js'
+import { asSessionId, type AgentLike, type AgentPresetsService, type AgentsCreateOptions, type AgentsService, type ChannelAgentHandle, type PromptBlock, type WorkspaceEntry } from './services.js'
 import type { OneBotClient } from './onebot.js'
 import type { PersonaConfig } from './config.js'
 import { timeContext } from './scheduler.js'
@@ -296,6 +296,17 @@ ${prompt}`)
       this.log(`dm proactive submitted`)
     } catch (error) {
       this.log(`dm proactive failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /** 面板保存默认模型后立即热切换：把每个活会话重指向当前默认路由。
+   *  select() 记录为 pending，正在跑的 turn 不受影响，下一个请求头即消费。 */
+  hotReselectModel(): void {
+    let selection: { provider: string; model: string }
+    try { selection = this.ctx.agentDefaultModel.currentSelection() } catch { return }
+    for (const conversation of this.conversations.values()) {
+      const live = conversation.handle?.agent
+      if (live !== undefined) syncResumedModel(live, selection, this.log)
     }
   }
 
@@ -800,9 +811,9 @@ ${prompt}`)
       // turn watch the original setup() hook can no longer provide.
       if (live.ctx !== undefined) {
         attachTurnWatch(live.ctx, conversation, this.log)
-        // Every resume re-installs: the Web UI or stale request headers can
+        // Every resume re-syncs: the Web UI or stale persisted selections can
         // silently swap routes between turns.
-        installModelOverride(live.ctx, selection)
+        syncResumedModel(live, selection, this.log)
       }
       handle = { agent: live }
       this.log(`resumed session ${sessionId} for ${key} (route ${selection.provider}/${selection.model})`)
@@ -949,23 +960,32 @@ ${prompt}`)
 
 /**
  * Force the current default route onto a resumed session: its persisted
- * request header still names the provider/model from previous runs (which may
- * be retired upstream), so every request is re-pointed here. The Web UI can
- * still override per session by changing the default while no turn runs.
+ * selection still names the provider/model from previous runs (which may be
+ * retired upstream). The old agent/request-hook re-point is dead since
+ * 0.2.2-rc.2 — the loop hard-fails any post-step-preparation provider/model
+ * change ("use agent.model.select() before step preparation") — so record the
+ * route durably via model.select() instead. One call sticks until the Web UI
+ * records a different selection; the next matching request header retires it.
  */
-function installModelOverride(
-  agentCtx: Context,
+function syncResumedModel(
+  live: AgentLike,
   selection: { provider: string; model: string },
+  log?: (line: string) => void,
 ): void {
-  const events = agentCtx as unknown as {
-    on(event: string, listener: never): unknown
+  interface ModelSel {
+    current(): { provider: string; model: string } | undefined
+    select(s: { provider: string; model: string }): void
   }
-  events.on('agent/request', ((payload: unknown, next: () => Promise<{ provider: string; model: string }>) => {
-    return next().then((resolved) => {
-      if (resolved.provider === selection.provider && resolved.model === selection.model) return resolved
-      return { ...resolved, provider: selection.provider, model: selection.model }
-    })
-  }) as never)
+  const model = (live as unknown as { model?: ModelSel }).model
+    ?? (live.ctx as unknown as { model?: ModelSel } | undefined)?.model
+  if (model === undefined || typeof model.select !== 'function') {
+    log?.('model.select unavailable on resumed agent; keeping persisted route')
+    return
+  }
+  const cur = model.current()
+  if (cur !== undefined && cur.provider === selection.provider && cur.model === selection.model) return
+  model.select({ ...selection })
+  log?.(`model.select: ${cur ? `${cur.provider}/${cur.model}` : 'unset'} → ${selection.provider}/${selection.model}`)
 }
 
 /** Track turn lifecycle per conversation (batch waiting + error visibility). */

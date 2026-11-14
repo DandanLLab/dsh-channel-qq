@@ -131,7 +131,7 @@ export class ChannelQQ extends Service {
     // Meme Engine 组件（dsh-meme 并入）：图库/send_meme/learn_meme/管理面板，config.memeEngine.enabled 开关
     const disposeMeme = await applyMemeEngine(this.ctx, config, this.client, out, this.log)
     // 设置页后端（QQ 设置 section 的读写 API）：回环 only + 热改 config + settings.json 持久化
-    const disposeSettings = registerSettingsApi(this.ctx, config, defaultDshHome(), this.log, this.client)
+    const disposeSettings = registerSettingsApi(this.ctx, config, defaultDshHome(), this.log, this.client, () => this.bridge)
     // QQ 频道控制台（/qq-panel）：状态/窗口/门控审计/日志/重连，回环 only
     const disposePanel = registerPanel(this.ctx, config, defaultDshHome(), this.log, {
       client: this.client,

@@ -20,4 +20,6 @@ export declare function registerSettingsApi(ctx: Context, config: QQChannelConfi
     };
     isConnected?: () => boolean;
     forceReconnect?: () => void;
-}): () => void;
+}, getBridge?: () => {
+    hotReselectModel(): void;
+} | null): () => void;
