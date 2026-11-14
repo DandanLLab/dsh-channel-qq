@@ -495,15 +495,21 @@ ${prompt}`)
     if (key === null) return
     const parsed = parseInbound(event)
 
-    // 陌生群预警：机器人在非白名单群收到消息时给主人发预警（本插件不会在这些群发言）
-    if (event.message_type === 'group' && typeof event.group_id === 'number' && this.dmGate !== null) {
+    // 白名单外群聊：直接在入口过滤（2026-11-14 owner 令）——不进 STT/引文抓取/
+    // 视觉附件/攒批，一条都不喂给模型（省 token）。唯一保留的动作是陌生群预警
+    // （dmGate.groupAlert 可关），预警之外零开销。
+    if (event.message_type === 'group' && typeof event.group_id === 'number') {
       const allowed = event.group_id === this.config.primaryGroup || (this.config.extraGroups ?? []).includes(event.group_id)
-      if (!allowed && this.config.dmGate.groupAlert !== false) {
-        const gid = event.group_id
-        void this.dmGate.alert(
-          '【陌生群预警】机器人在未配置的群 ' + gid + ' 收到消息（说话人 QQ' + (event.user_id ?? '?') + '）。若不是你拉的群请检查；可在群设置移除机器人，或把群号加进 extraGroups 放行。',
-          'group-' + gid,
-        )
+      if (!allowed) {
+        if (this.dmGate !== null && this.config.dmGate.groupAlert !== false) {
+          const gid = event.group_id
+          void this.dmGate.alert(
+            '【陌生群预警】机器人在未配置的群 ' + gid + ' 收到消息（说话人 QQ' + (event.user_id ?? '?') + '）。若不是你拉的群请检查；可在群设置移除机器人，或把群号加进 extraGroups 放行。',
+            'group-' + gid,
+          )
+        }
+        this.log(`group ${event.group_id} not whitelisted — dropped at intake`)
+        return
       }
     }
 
