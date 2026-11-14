@@ -24,6 +24,8 @@ export declare class OneBotClient extends EventEmitter {
     start(): void;
     stop(): void;
     isConnected(): boolean;
+    /** Web console manual reconnect: reset backoff and drop the socket; the close handler dials again immediately. */
+    forceReconnect(): void;
     /** One OneBot API call; resolves with `data` on ok, rejects on failure or timeout. */
     call(action: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;
     private handleFrame;
