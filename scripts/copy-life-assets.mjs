@@ -29,3 +29,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
   cpSync(join(src, 'bundled-pack'), join(dst, 'bundled-pack'), { recursive: true })
   console.log('meme assets copied →', dst)
 }
+
+// panel: QQ console page served by src/panel.ts from its lib sibling
+{
+  copyFileSync(join(root, 'src', 'qq-panel.html'), join(root, 'lib', 'qq-panel.html'))
+  console.log('qq-panel.html copied →', join(root, 'lib'))
+}

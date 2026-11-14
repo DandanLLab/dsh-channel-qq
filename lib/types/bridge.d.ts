@@ -38,6 +38,17 @@ export declare class ConversationBridge {
     private readonly out;
     private readonly log;
     private get persona();
+    /** Web console summary of every conversation window (one row per group / DM peer). */
+    snapshot(): Array<{
+        key: string;
+        isGroup: boolean;
+        chatId: number;
+        sessionId: string;
+        live: boolean;
+        pending: boolean;
+        queued: number;
+        lastEventTime: number | null;
+    }>;
     private readonly conversations;
     private readonly ensureInFlight;
     /** Poke patience counters per group. */
@@ -86,6 +97,9 @@ export declare class ConversationBridge {
     private transcribeVoice;
     /** Proactive DM: she comes to find the master on her own initiative. */
     dmProactive(prompt: string): Promise<void>;
+    /** 面板保存默认模型后立即热切换：把每个活会话重指向当前默认路由。
+     *  select() 记录为 pending，正在跑的 turn 不受影响，下一个请求头即消费。 */
+    hotReselectModel(): void;
     /** Scheduler hooks: patrol / dream / evolution packets on the group session. */
     patrolTick(key: string, prompt: string): Promise<void>;
     dreamTick(key: string, prompt: string): Promise<void>;
