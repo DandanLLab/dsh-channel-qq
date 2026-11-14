@@ -678,7 +678,7 @@ const CardCfg = {
     App.api('/channel-qq-api').then((j) => {
       const s = j.settings || {};
       for (const g of CFG_GROUPS) for (const f of g.fields) {
-        const el = $('f-' + CSS.escape(f.k));
+        const el = $('f-' + f.k);
         if (!el) continue;
         if (f.type === 'model') { this.snapshot[f.k] = ''; continue; }
         let v = s[f.k];
@@ -744,7 +744,7 @@ const CardCfg = {
     return sel.value;
   },
   valueOf(k) {
-    const el = $('f-' + CSS.escape(k));
+    const el = $('f-' + k);
     if (!el) return undefined;
     if (el.type === 'checkbox') return el.checked;
     if (this.meta[k].type === 'array') return el.value.split(/[,，]+/).map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
@@ -752,7 +752,7 @@ const CardCfg = {
     return el.value;
   },
   serialize(k) {
-    const el = $('f-' + CSS.escape(k));
+    const el = $('f-' + k);
     if (!el) return '';
     if (k === 'defaultModel') return this.modelText();
     if (el.type === 'checkbox') return el.checked ? '1' : '0';
@@ -764,7 +764,7 @@ const CardCfg = {
     for (const g of CFG_GROUPS) {
       let dirty = 0;
       for (const f of g.fields) {
-        const el = $('f-' + CSS.escape(f.k));
+        const el = $('f-' + f.k);
         if (!el) continue;
         const isDirty = this.serialize(f.k) !== String(this.snapshot[f.k] ?? '');
         el.classList.toggle('dirty', isDirty && el.type !== 'checkbox');
@@ -783,7 +783,7 @@ const CardCfg = {
   async save() {
     const patch = {};
     for (const g of CFG_GROUPS) for (const f of g.fields) {
-      const el = $('f-' + CSS.escape(f.k));
+      const el = $('f-' + f.k);
       if (!el) continue;
       if (this.serialize(f.k) === String(this.snapshot[f.k] ?? '')) continue;
       if (f.type === 'model') {
